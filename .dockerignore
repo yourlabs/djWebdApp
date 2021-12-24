@@ -1,1 +1,9 @@
-.gitignore
+__pycache__
+dist
+*.pyc
+.eggs
+.setupmeta.version
+db.sqlite3
+*.egg-info/
+docs/_build
+build
