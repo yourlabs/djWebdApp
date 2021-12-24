@@ -23,7 +23,12 @@ test:
 
 tezos:
   stage: test
-  script: pip install .[all] && py.test -sv src/djwebdapp_tezos*
+  script:
+    - until ping tzkt-api; do sleep 1; done
+    - until ping tzkt-sync; do sleep 1; done
+    - until ping tzkt-db; do sleep 1; done
+    - until ping tzlocal; do sleep 1; done
+    - pip install .[all] && py.test -sv src/djwebdapp_tezos*
   image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
   variables:
     POSTGRES_USER: tzkt
@@ -39,7 +44,7 @@ tezos:
     name: postgres:13
   - alias: tzkt-api
     name: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api
-  - alias: sync
+  - alias: tzkt-sync
     name: bakingbad/tzkt-sync:latest
   - alias: tzlocal
     name: yourlabs/tezos
