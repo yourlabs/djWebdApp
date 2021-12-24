@@ -45,7 +45,7 @@ test:
 tezos:
   stage: test
   script: py.test -sv src/djwebdapp_tezos*
-  image: djwebdapp
+  image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
   variables:
     POSTGRES_USER: tzkt
     POSTGRES_PASSWORD: qwerty
