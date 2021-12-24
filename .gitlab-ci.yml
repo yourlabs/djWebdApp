@@ -8,6 +8,14 @@ build:
     - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
 
+tzkt-api-build:
+  image: docker:dind
+  stage: build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api .
+    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api
+
 test:
   stage: test
   image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
@@ -29,7 +37,7 @@ tezos:
   - alias: tzkt-db
     name: postgres:13
   - alias: tzkt-api
-    name: bakingbad/tzkt-api:latest
+    name: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api
   - alias: sync
     name: bakingbad/tzkt-sync:latest
   - alias: tzlocal
