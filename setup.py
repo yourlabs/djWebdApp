@@ -8,6 +8,7 @@ extras_require = dict(
     ],
     tezos=[
         'pytezos',
+        'dipdup',
     ],
     test=[
         'django',
