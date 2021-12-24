@@ -2,7 +2,7 @@ image: yourlabs/python
 
 test:
   stage: test
-  script: pip install .[test] && py.test -sv tests
+  script: pip install .[test,vault] && py.test -sv tests
 
 tezos:
   stage: test
