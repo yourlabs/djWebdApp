@@ -17,22 +17,19 @@ tezos:
   stage: test
   script: pip install .[all] && py.test -sv src/djwebdapp_tezos*
   image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  variables:
+    POSTGRES_USER: tzkt
+    POSTGRES_PASSWORD: qwerty
+    POSTGRES_DB: tzkt_db
+    TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://tzkt-api:5000
+    TezosNode__Endpoint: http://tzlocal:8732
   services:
   - alias: tzkt-db
     name: postgres:13
-    variables:
-      POSTGRES_USER: tzkt
-      POSTGRES_PASSWORD: qwerty
-      POSTGRES_DB: tzkt_db
   - alias: tzkt-api
     name: bakingbad/tzkt-api:latest
-    variables:
-      TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://tzkt-api:5000
-      TezosNode__Endpoint: http://tzlocal:8732
   - alias: sync
     name: bakingbad/tzkt-sync:latest
-    variables:
-      TezosNode__Endpoint: http://tzlocal:8732
   - alias: tzlocal
     name: yourlabs/tezos
 
