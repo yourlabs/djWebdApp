@@ -9,8 +9,30 @@ from djwebdapp.provider import Provider
 
 
 class TezosProvider(Provider):
+    """
+    djWebdApp provider for the Tezos blockchain.
+
+    It takes a ``tzkt`` configuration key to specify the URL of the tzkt API to
+    use, ie.:
+
+    .. code-block:: python
+
+        blockchain = Blockchain.objects.create(
+            name='Tezos Mainnet',
+            provider_class='djwebdapp_tezos.provider.TezosProvider',
+            configuration=dict(
+                tzkt='https://api.tzkt.io/',
+            ),
+        )
+
+    """
+
     @async_to_sync
     async def sync_contract(self, contract):
+        """
+        Index calls for a given contract.
+        """
+
         @sync_to_async
         def handle_result(result):
             contract.call_set.update_or_create(

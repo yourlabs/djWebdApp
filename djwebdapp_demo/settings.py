@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'djwebdapp',
     'djwebdapp_vault',
-    'djwebdapp_demo',
+    'djwebdapp_tezos_example',
 ]
 
 MIDDLEWARE = [

@@ -4,3 +4,4 @@ __pycache__
 .setupmeta.version
 db.sqlite3
 *.egg-info/
+docs/_build
