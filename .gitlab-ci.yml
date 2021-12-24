@@ -24,9 +24,9 @@ test:
 tezos:
   stage: test
   script:
+    - until ping tzkt-db; do sleep 1; done
     - until ping tzkt-api; do sleep 1; done
     - until ping tzkt-sync; do sleep 1; done
-    - until ping tzkt-db; do sleep 1; done
     - until ping tzlocal; do sleep 1; done
     - pip install .[all] && py.test -sv src/djwebdapp_tezos*
   image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
