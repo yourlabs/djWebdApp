@@ -1,0 +1,2 @@
+include *.rst
+recursive-include src *.html *.css *.js *.py *.json
