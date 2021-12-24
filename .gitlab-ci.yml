@@ -32,6 +32,7 @@ tezos:
     TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://tzkt-api:5000
     TezosNode__Endpoint: http://tzlocal:8732
     ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
+    FF_NETWORK_PER_BUILD: 1
 
   services:
   - alias: tzkt-db
