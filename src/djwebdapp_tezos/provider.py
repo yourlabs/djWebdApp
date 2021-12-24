@@ -64,3 +64,6 @@ class TezosProvider(Provider):
             )
             for result in results:
                 await handle_result(result)
+
+            if results:
+                return True

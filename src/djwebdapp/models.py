@@ -297,11 +297,13 @@ class SmartContract(Transaction):
     )
 
     def sync(self):
-        self.provider.sync_contract(self)
-        contract_indexed.send(
-            sender=type(self),
-            instance=self,
-        )
+        result = self.provider.sync_contract(self)
+        if result:
+            contract_indexed.send(
+                sender=type(self),
+                instance=self,
+            )
+            return True
 
     def call(self, **kwargs):
         return Call.objects.create(
