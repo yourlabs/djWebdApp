@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 extras_require = dict(
     vault=[
-        'djfernet',
+        'djfernet>=0.7.2',
         'mnemonic',
     ],
     tezos=[
