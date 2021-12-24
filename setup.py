@@ -10,6 +10,11 @@ extras_require = dict(
         'pytezos',
         'dipdup',
     ],
+    binary=[
+        'pysodium',
+        'secp256k1',
+        'fastecdsa',
+    ],
     test=[
         'django',
         'djangorestframework',
