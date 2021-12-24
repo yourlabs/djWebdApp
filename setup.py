@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 extras_require = dict(
     vault=[
-        'django-fernet-fields',
+        'djfernet',
         'mnemonic',
     ],
     tezos=[

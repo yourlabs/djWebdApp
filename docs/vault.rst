@@ -12,8 +12,8 @@ Follow the installation steps in this precise order:
 - Run ``./manage.py migrate``,
 
 .. note:: You may rotate Fernet keys used for encryption, please refer to
-          `django-fernet-fields
-          <https://django-fernet-fields.readthedocs.io/en/latest/#keys>`_
+          `djfernet
+          <https://djfernet.readthedocs.io/en/latest/#keys>`_
           documentation.
 
 Create a wallet
