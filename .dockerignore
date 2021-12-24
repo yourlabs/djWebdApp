@@ -7,3 +7,4 @@ db.sqlite3
 *.egg-info/
 docs/_build
 build
+Dockerfile*
