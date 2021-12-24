@@ -8,10 +8,10 @@ We will need to instanciate a contract on this blockchain. We'll use a simple
 example in actually pure Python with the PyMich compiler.
 
 We have an ``example.py`` contract source code and its compiled version in an
-``example.json`` file in ``src/djwebdapp_tezos``. This is what the Python code
-is like:
+``example.json`` file in ``src/djwebdapp_tezos_example`` directory. This is
+what the Python code is like:
 
-.. literalinclude:: ../src/djwebdapp_tezos/example.py
+.. literalinclude:: ../src/djwebdapp_tezos_example/example.py
   :language: Python
 
 Where you to change it, you would have to recompile it into Micheline JSON with
@@ -29,8 +29,8 @@ Instead of using the mainnet, we're going to use a local blockchain, so that
 you learn how to test locally. Also, we're going to setup a local tzkt API,
 because this is used by the tezos provider to index blockchain data.
 
-We provide a ``docker-compose.yml`` in the ``src/djwebdapp_tezos`` directory of
-this repository, get in there and run ``docker-compose up``.
+We provide a ``docker-compose.yml`` in the ``src/djwebdapp_tezos_example``
+directory of this repository, get in there and run ``docker-compose up``.
 
 As some of us will also want to convert this to `GitLab-CI
 services <https://docs.gitlab.com/ee/ci/services/>`_\ , we'll refer to our services
@@ -143,19 +143,21 @@ This will synchronize the contract using the tzkt API.
 Normalizing incomming data
 ==========================
 
-In the ``djwebdapp_tezos_demo`` app we have created some sample models to
+In the ``djwebdapp_tezos_example`` app we have created some sample models to
 normalize incomming data, if you want to create your own in your own project
 this completely arbitrary code that would go in the ``models.py`` script in a
 new app you would have created with ``./manage.py startapp``.
 
-You can see the example source code in question in ``djwebdapp_demo/models.py``,
-it registers 2 callbacks:
-
+It defines some arbitrary models, intended to be as simple as possible for the
+sake of the example and at the same time sufficiently close to realistic use
+cases, it registers 2 callbacks for normalization:
 
 * ``call_mint``: is connected to the standard django post_save signal for the
   Call model,
 * ``balance_update``: is connected to the ``djwebdapp.signals.contract_indexed``
   signal.
+
+You can verify with the following code in ``./manage.py shell``:
 
 .. code-block:: py
 
@@ -167,25 +169,13 @@ it registers 2 callbacks:
    contract.fa12.mint_set.all()
    # <QuerySet [<Mint: mint(tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx, 1000)>]>
 
-   from djwebdapp_tezos_demo.models import Balance
+   from djwebdapp_tezos_example.models import Balance
 
    Balance.objects.all()
    # <QuerySet [<Balance: tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx balance: 1000>]>
 
-Writing the blockchain
-======================
+You can see the example source code in question in
+``src/djwebdapp_tezos_example/models.py``:
 
-To write the blockchain, you will need to add a node to your blockchain and then
-Add
-``djtezos_vault`` to your ``INSTALLED_APPS`` settings and run ``./manage.py migrate``.
-
-Then, create a new wallet in a blockchain:
-
-.. code-block:: py
-
-   from djwebdapp.models import Blockchain
-   from djwebdapp_vault.models import Wallet
-
-
-   wallet = Wallet.objects.create(
-   )
+.. literalinclude:: ../src/djwebdapp_tezos_example/models.py
+  :language: Python
