@@ -20,7 +20,7 @@ extras_require = dict(
 
 extras_require['all'] = []
 for deps in extras_require.values():
-    extras_require += deps
+    extras_require['all'] += deps
 
 
 setup(
@@ -33,7 +33,7 @@ setup(
         'django-model-utils',
         'tenacity',
     ],
-    extras_require=extra_require,
+    extras_require=extras_require,
     author='James Pic',
     author_email='jamespic@gmail.com',
     url='https://yourlabs.io/oss/djwebdapp',
