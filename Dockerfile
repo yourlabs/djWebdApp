@@ -10,8 +10,11 @@ RUN pip install djcli wheel
 WORKDIR /app
 
 COPY setup.py README.rst /app/
+# run a first dependency install prior to moving code that would invalidate the
+# layer
+RUN mkdir /app/src && pip install --editable /app[all]
 COPY src /app/src
-RUN pip install --editable /app[all]
+RUN pip install -U --editable /app[all]
 COPY djwebdapp_demo /app/djwebdapp_demo
 COPY manage.py /app
 

@@ -39,13 +39,13 @@ by hostname from now on, which is why we add the following to
 
 .. code-block::
 
-   127.0.0.1 tzlocal api
+   127.0.0.1 tzlocal tzkt-api
 
 You should then have:
 
 * a local tezos sandbox on ``tzlocal:8732`` which autobakes every second (like
   geth development mode)
-* a local tzkt API on ``api:5000``
+* a local tzkt API on ``tzkt-api:5000``
 
 Example contract deployment
 ===========================

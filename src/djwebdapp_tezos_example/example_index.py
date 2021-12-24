@@ -5,7 +5,7 @@ blockchain, _ = Blockchain.objects.get_or_create(
     name='Tezos Local',
     provider_class='djwebdapp_tezos.provider.TezosProvider',
     configuration=dict(
-        tzkt='http://api:5000',
+        tzkt='http://tzkt-api:5000',
     ),
 )
 
@@ -18,7 +18,5 @@ import time
 
 assert contract.sync(tries=100), 'Contract did not sync'
 
+# indexed Call objects:
 assert contract.call_set.count()
-assert contract.fa12
-assert contract.fa12.mint_set.all()
-assert Balance.objects.first().balance == 1000
