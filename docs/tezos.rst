@@ -39,13 +39,13 @@ by hostname from now on, which is why we add the following to
 
 .. code-block::
 
-   127.0.0.1 tzlocal api
+   127.0.0.1 tzlocal tzkt-api
 
 You should then have:
 
 * a local tezos sandbox on ``tzlocal:8732`` which autobakes every second (like
   geth development mode)
-* a local tzkt API on ``api:5000``
+* a local tzkt API on ``tzkt-api:5000``
 
 Example contract deployment
 ===========================
@@ -83,58 +83,27 @@ Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting th
 following in our pytezos python shell started above, which you need to start if
 you haven't already to run the following commands:
 
-.. code-block:: py
+.. literalinclude:: ../src/djwebdapp_tezos_example/example_origination.py
+  :language: Python
 
-   import json, time
-   from pytezos import pytezos
-   from pytezos.operation.result import OperationResult
-   client = pytezos.using(
-       key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
-       shell='http://tzlocal:8732',
-   )
-   source = json.load(open('src/djwebdapp_tezos/example.json'))
-   storage = {'prim': 'Pair', 'args': [[], {'int': '0'}, {'string': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'}]}
-   operation = client.origination(dict(code=source, storage=storage)).autofill().sign().inject(_async=False)
-   time.sleep(2)  # wait for sandbox to bake
-   opg = client.shell.blocks[operation['branch']:].find_operation(operation['hash'])
-   res = OperationResult.from_operation_group(opg)
-   address = res[0].originated_contracts[0]
-   client.contract(address).mint('tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 1000).send().autofill().sign().inject()
-   print('CONTRACT ADDRESS: ' + address)
-
-This should output the deployed contract address, in my case
-``KT1HPBnfPPkbUzNvW9HBKM4tTzBciVeswCR4`` which I'll refer to from now on.
+This should store the deployed contract address in the address variable, copy
+it because you need it to index the contract in the next section.
 
 Indexing a contract
 ===================
 
 Now that we have deployed a contract, and setup ``djwebdapp`` for a local tezos
-node, let's index a contract, also programatically so in ``./manage.py shell``:
+node, let's index a contract, also programatically so in ``./manage.py shell``,
+declare ``address='<YOUR CONTRACT ADDRESS>`` and run the following code:
 
-.. code-block:: py
+.. literalinclude:: ../src/djwebdapp_tezos_example/example_index.py
+  :language: Python
 
-   from djwebdapp.models import Blockchain, SmartContract
-
-   # First, we need to add a blockchain in the database
-   blockchain, _ = Blockchain.objects.get_or_create(
-       name='Tezos Local',
-       provider_class='djwebdapp_tezos.provider.TezosProvider',
-       configuration=dict(
-           tzkt='http://api:5000',
-       ),
-   )
-
-   # Then, insert a smart contract with our address
-   contract, _ = SmartContract.objects.get_or_create(
-       blockchain=blockchain,
-       address='KT1Kie724z2jXbbm9AnTaNYsRJeAbax88Hqb',
-   )
-
-   contract.sync()
-
-   print(contract.call_set.first().__dict__)
-
-This will synchronize the contract using the tzkt API.
+This will synchronize the contract using the tzkt API. The ``tries`` argument
+is optionnal, and useful for freshly originated contracts, so that it will wait
+until it indexes at least one transaction before returning. ``contract.sync()``
+returns True if at least one transaction was returned by tzkt for this contract
+address.
 
 .. note:: Instead of the above code, we could have added the Blockchain and
           SmartContract in the admin and called ``./manage.py

@@ -1,8 +1,69 @@
 image: yourlabs/python
 
+build:
+  image: docker:dind
+  stage: build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+
+tzkt-api-build:
+  image: docker:dind
+  stage: build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -f src/djwebdapp_tezos_example/Dockerfile.tzkt-api -t $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api .
+    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api
+
 test:
   stage: test
-  script: pip install .[all] && py.test -sv
+  image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  script: py.test -sv tests
+
+# The following job tests tezos, it's a bit complicated to debug so I'll
+# document it here.
+#
+# First, build a tzkt-api image that exposes port 5000, at least until they
+# merge https://github.com/baking-bad/tzkt/pull/79 as such:
+#
+# docker build -f src/djwebdapp_tezos_example/Dockerfile.tzkt-api -t tzkt-api .
+#
+# Also, build the local test image as such:
+#
+# docker build -t djwebdapp .
+#
+# Then, change the job image to be "djwebdapp" in the following config.
+#
+# Finnally, you can run:
+#
+# gitlab-runner exec docker --docker-pull-policy=if-not-present tezos
+#
+# This will execute the same as the gitlab server but on your local
+# workstation. You'll then be able to enter the containers and debug them from
+# the inside.
+tezos:
+  stage: test
+  script: py.test -sv src/djwebdapp_tezos*
+  image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
+  variables:
+    POSTGRES_USER: tzkt
+    POSTGRES_PASSWORD: qwerty
+    POSTGRES_DB: tzkt_db
+    TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://tzkt-api:5000
+    TezosNode__Endpoint: http://tzlocal:8732
+    ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
+    FF_NETWORK_PER_BUILD: "1"
+
+  services:
+  - alias: tzkt-db
+    name: postgres:13
+  - alias: tzkt-api
+    name: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api
+  - alias: tzkt-sync
+    name: bakingbad/tzkt-sync:latest
+  - alias: tzlocal
+    name: yourlabs/tezos
 
 pypi:
   stage: deploy
