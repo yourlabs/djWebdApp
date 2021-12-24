@@ -13,7 +13,7 @@ tzkt-api-build:
   stage: build
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api .
+    - docker build -f src/djwebdapp_tezos_example/Dockerfile.tzkt-api -t $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api .
     - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}-tzkt-api
 
 test:
