@@ -1,5 +1,9 @@
 import importlib
+import random
 import uuid
+import string
+import datetime
+import logging
 
 from django.conf import settings
 from django.db import models
@@ -10,8 +14,14 @@ from model_utils.managers import (
     InheritanceQuerySetMixin,
 )
 
-from djwebdapp.signals import contract_indexed
+from cryptography.hazmat.primitives.ciphers import (
+    Cipher, algorithms, modes)
+from cryptography.hazmat.backends import default_backend
 
+from djwebdapp.signals import contract_indexed
+from model_utils.managers import InheritanceManager
+
+logger = logging.getLogger('djwebdapp')
 
 SETTINGS = dict(
     PROVIDERS=(
@@ -22,6 +32,28 @@ SETTINGS = dict(
     )
 )
 SETTINGS.update(getattr(settings, 'DJBLOCKCHAIN', {}))
+
+
+KEY = settings.SECRET_KEY.encode('utf8')[:32]
+IV = settings.SECRET_KEY.encode('utf8')[-16:]
+
+
+def cipher():
+    return Cipher(
+        algorithms.AES(KEY),
+        modes.CBC(IV),
+        backend=default_backend()
+    )
+
+
+def encrypt(secret):
+    encryptor = cipher().encryptor()
+    return encryptor.update(secret) + encryptor.finalize()
+
+
+def decrypt(secret):
+    decryptor = cipher().decryptor()
+    return decryptor.update(secret) + decryptor.finalize()
 
 
 class Address(models.Model):
@@ -72,12 +104,32 @@ class Address(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    crypted_key = models.BinaryField(blank=True, null=True)
+
+    def generate_private_key(self):
+        if self.crypted_key or not self.owner:
+            return
+
+        passphrase = ''.join(
+            random.choice(string.ascii_letters) for i in range(42)
+        )
+
+        self.address, private_key = (
+            self.blockchain.provider.create_wallet(passphrase)
+        )
+
+        self.crypted_key = encrypt(private_key)
+
+    @property
+    def private_key(self):
+        return decrypt(self.crypted_key) if self.crypted_key else None
 
 
 class Blockchain(models.Model):
     name = models.CharField(
         max_length=100,
     )
+    endpoint = models.CharField(max_length=255, default="")
     provider_class = models.CharField(
         max_length=255,
         choices=SETTINGS['PROVIDERS'],
@@ -180,6 +232,8 @@ class Explorer(models.Model):
 
 
 class Transaction(models.Model):
+    objects = InheritanceManager()
+
     id = models.UUIDField(
         primary_key=True,
         editable=False,
@@ -216,6 +270,12 @@ class Transaction(models.Model):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
+    )
+    amount = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Amount in xTZ',
+        db_index=True,
     )
     datetime = models.DateTimeField(
         null=True,
@@ -295,6 +355,11 @@ class SmartContract(Transaction):
         default=dict,
         blank=True,
     )
+    contract_micheline = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+    )
 
     def sync(self):
         self.provider.sync_contract(self)
@@ -343,9 +408,4 @@ class Transfer(Transaction):
         blank=True,
         null=True,
         on_delete=models.CASCADE,
-    )
-    amount = models.PositiveIntegerField(
-        db_index=True,
-        null=True,
-        blank=True,
     )
