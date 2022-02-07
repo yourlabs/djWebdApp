@@ -6,13 +6,6 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from model_utils.managers import (
-    InheritanceManagerMixin,
-    InheritanceQuerySetMixin,
-)
-
-from djwebdapp.signals import contract_indexed
-
 
 SETTINGS = dict(
     PROVIDERS=(

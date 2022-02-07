@@ -12,7 +12,7 @@ blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
 # Then, insert a smart contract with our address
 contract, _ = SmartContract.objects.get_or_create(
     blockchain=blockchain,
-    address=address,
+    address=address,  # noqa it's a global
 )
 
 # in the case of tezos, you could also run ./manage.py tzkt_index_contracts

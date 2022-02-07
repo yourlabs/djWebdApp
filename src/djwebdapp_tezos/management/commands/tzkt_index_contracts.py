@@ -5,7 +5,6 @@ from django.core.management.base import BaseCommand
 from djwebdapp.models import Address
 from djwebdapp.models import SmartContract
 from djwebdapp.signals import contract_indexed
-from pytezos import pytezos
 
 
 class Command(BaseCommand):

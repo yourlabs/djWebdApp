@@ -1,9 +1,5 @@
 from pytezos import ContractInterface
 
-from django.db.models.expressions import Value
-
-from djwebdapp.models import SmartContract
-
 from djwebdapp.signals import call_indexed, contract_indexed
 
 
@@ -29,7 +25,7 @@ def contract_indexed_call_args(sender, instance, **kwargs):
         args = method.decode(call.metadata['parameters']['value'])
         call.args = args[call.function]
         call.save()
-contract_indexed.connect(contract_indexed_call_args)
+contract_indexed.connect(contract_indexed_call_args)  # noqa
 
 
 def call_indexed_call_args(sender, instance, **kwargs):
@@ -45,4 +41,4 @@ def call_indexed_call_args(sender, instance, **kwargs):
     instance.function = instance.metadata['parameters']['entrypoint']
     method = getattr(interface, instance.function)
     instance.args = method.decode(instance.metadata['parameters']['value'])
-call_indexed.connect(call_indexed_call_args)
+call_indexed.connect(call_indexed_call_args)  # noqa

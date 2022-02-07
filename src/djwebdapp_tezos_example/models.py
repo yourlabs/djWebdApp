@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import signals, Sum
 
-from djwebdapp.models import Call, SmartContract
+from djwebdapp.models import Call
 from djwebdapp.signals import contract_indexed
 
 
@@ -76,7 +76,7 @@ def call_mint(sender, instance, **kwargs):
             value=instance.args['value'],
         )
     )
-signals.post_save.connect(call_mint, sender=Call)
+signals.post_save.connect(call_mint, sender=Call)  # noqa
 
 
 def balance_update(sender, instance, **kwargs):
@@ -99,4 +99,4 @@ def balance_update(sender, instance, **kwargs):
                 balance=total,
             ),
         )
-contract_indexed.connect(balance_update)
+contract_indexed.connect(balance_update)  # noqa

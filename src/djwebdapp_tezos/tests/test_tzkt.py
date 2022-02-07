@@ -27,7 +27,8 @@ def test_tzkt():
 
     assert call
     assert call.function == 'mint'
-    assert call.args == {'_to': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 'value': '1000'}
+    assert call.args['_to'] == 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'
+    assert call.args['value'] == '1000'
 
     # normalized data also synchronized
     assert contract.fa12

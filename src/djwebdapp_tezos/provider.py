@@ -1,22 +1,12 @@
 import logging
-from mnemonic import Mnemonic
 
-from asgiref.sync import async_to_sync, sync_to_async
-
-from dipdup.datasources.tzkt.datasource import TzktDatasource
-
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-from djwebdapp.models import Address, SmartContract, Transfer, Call, Transaction
-from djwebdapp.exceptions import PermanentError
+from djwebdapp.models import Address, SmartContract, Call, Transaction
 from djwebdapp.provider import Provider
 from djwebdapp.signals import call_indexed, contract_indexed
 
-from pytezos import pytezos, Key
-from pytezos.rpc.node import RpcError
-
-
+from pytezos import pytezos
 
 
 class TezosProvider(Provider):
@@ -25,8 +15,15 @@ class TezosProvider(Provider):
     def index(self):
         client = pytezos.using(shell=self.blockchain.node_set.first().endpoint)
 
-        start_level = current_level = client.shell.head.metadata()['level_info']['level_position']
-        if self.blockchain.max_level and start_level < self.blockchain.max_level:
+        start_level = current_level = (
+            client.shell.head.metadata()['level_info']['level_position']
+        )
+
+        reorg = (
+            self.blockchain.max_level
+            and start_level < self.blockchain.max_level
+        )
+        if reorg:
             # reorg
             Transaction.objects.filter(
                 sender__blockchain=self.blockchain,
@@ -40,13 +37,24 @@ class TezosProvider(Provider):
             self.blockchain.max_level = self.blockchain.max_level
             self.blockchain.save()
             return  # commit to reorg in a transaction
-        if self.blockchain.max_level and start_level == self.blockchain.max_level:
+
+        fresh = (
+            self.blockchain.max_level
+            and start_level == self.blockchain.max_level
+        )
+        if fresh:
             # no need to go all way back further if we are up to date just
             # check the head
             max_depth = 1
-        if self.blockchain.max_level and start_level > self.blockchain.max_level:
+
+        resume = (
+            self.blockchain.max_level
+            and start_level > self.blockchain.max_level
+        )
+        if resume:
             # go all way back to where we left
             max_depth = (start_level - self.blockchain.max_level) or 1
+
         if not self.blockchain.max_level:
             # go with an arbitrary backlog
             max_depth = 500
@@ -84,7 +92,7 @@ class TezosProvider(Provider):
                                 Q(address=address) | Q(hash=hash)
                             )
 
-                            self.logger.info(f'Syncing origination from {hash}')
+                            self.logger.info(f'Syncing origination {hash}')
                             contract.level = current_level
                             contract.address = address
                             contract.hash = hash
@@ -96,18 +104,21 @@ class TezosProvider(Provider):
                             )
                             contract.state_set('done')
                         elif content['kind'] == 'transaction':
-                            self.logger.info(f'Syncing transaction from {hash}')
+                            self.logger.info(f'Syncing transaction {hash}')
                             destination = content.get('destination', None)
                             if destination in addresses:
-                                self.index_call(current_level, op, content, contracts, self.blockchain)
+                                self.index_call(
+                                    current_level, op, content, contracts)
 
             current_level -= 1
-        self.blockchain.max_level = start_level - 1  # consider head as suceptible to change
+
+        # consider head as suceptible to change
+        self.blockchain.max_level = start_level - 1
+
         self.blockchain.save()
 
-    def index_call(self, level, op, content, contracts, blockchain):
+    def index_call(self, level, op, content, contracts):
         contract = contracts.get(address=content['destination'])
-        parameters = content.get('parameters', {})
         call = contract.call_set.filter(
             hash=op['hash'],
         ).select_related('contract').first()
