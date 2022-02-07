@@ -87,28 +87,12 @@ class TezosProvider(Provider):
                             if address not in addresses and hash not in hashes:
                                 # skip unknown contract originations
                                 continue
-
-                            contract = SmartContract.objects.get(
-                                Q(address=address) | Q(hash=hash)
-                            )
-
-                            self.logger.info(f'Syncing origination {hash}')
-                            contract.level = current_level
-                            contract.address = address
-                            contract.hash = hash
-                            contract.gas = content['fee']
-                            contract.metadata = content
-                            contract_indexed.send(
-                                sender=type(contract),
-                                instance=contract,
-                            )
-                            contract.state_set('done')
+                            self.index_contract(current_level, op, content)
                         elif content['kind'] == 'transaction':
-                            self.logger.info(f'Syncing transaction {hash}')
                             destination = content.get('destination', None)
-                            if destination in addresses:
-                                self.index_call(
-                                    current_level, op, content, contracts)
+                            if destination not in addresses:
+                                return
+                            self.index_call(current_level, op, content)
 
             current_level -= 1
 
@@ -117,8 +101,30 @@ class TezosProvider(Provider):
 
         self.blockchain.save()
 
-    def index_call(self, level, op, content, contracts):
-        contract = contracts.get(address=content['destination'])
+    def index_contract(self, level, op, content):
+        self.logger.info(f'Syncing origination {op["hash"]}')
+        result = content['metadata']['operation_result']
+        address = result['originated_contracts'][0]
+        contract = SmartContract.objects.get(
+            Q(address=address) | Q(hash=op['hash'])
+        )
+        contract.level = level
+        contract.address = address
+        contract.hash = hash
+        contract.gas = content['fee']
+        contract.metadata = content
+        contract_indexed.send(
+            sender=type(contract),
+            instance=contract,
+        )
+        contract.state_set('done')
+
+    def index_call(self, level, op, content):
+        self.logger.info(f'Syncing transaction {hash}')
+        contract = SmartContract.objects.get(
+            blockchain=self.blockchain,
+            address=content['destination'],
+        )
         call = contract.call_set.filter(
             hash=op['hash'],
         ).select_related('contract').first()
@@ -128,7 +134,6 @@ class TezosProvider(Provider):
                 contract=contract,
                 blockchain=self.blockchain,
             )
-        call.state = 'done'
         call.metadata = content
         call.gas = content['fee']
         call.level = level
@@ -140,4 +145,4 @@ class TezosProvider(Provider):
             sender=type(call),
             instance=call,
         )
-        call.save()
+        call.state_set('done')

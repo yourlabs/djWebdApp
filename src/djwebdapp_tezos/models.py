@@ -40,5 +40,6 @@ def call_indexed_call_args(sender, instance, **kwargs):
     )
     instance.function = instance.metadata['parameters']['entrypoint']
     method = getattr(interface, instance.function)
-    instance.args = method.decode(instance.metadata['parameters']['value'])
+    args = method.decode(instance.metadata['parameters']['value'])
+    instance.args = args[instance.function]
 call_indexed.connect(call_indexed_call_args)  # noqa

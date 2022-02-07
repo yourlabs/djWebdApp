@@ -6,7 +6,8 @@ from djwebdapp.models import Blockchain, SmartContract
 
 @pytest.mark.django_db
 def test_tzkt():
-    from djwebdapp_tezos_example.example_origination import address
+    from djwebdapp_tezos_example.example_origination import deploy
+    address = deploy()
 
     blockchain, _ = Blockchain.objects.get_or_create(
         name='Tezos Local',

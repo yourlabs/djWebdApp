@@ -3,7 +3,6 @@ from django.db import models
 from django.db.models import signals, Sum
 
 from djwebdapp.models import Call
-from djwebdapp.signals import contract_indexed
 
 
 class FA12(models.Model):
@@ -76,27 +75,25 @@ def call_mint(sender, instance, **kwargs):
             value=instance.args['value'],
         )
     )
+
+    # we're fully recalculating the balance here in case of a blockchain reorg
+    # to ensure the balance is always current
+    balance_update(fa12, instance.sender)
 signals.post_save.connect(call_mint, sender=Call)  # noqa
 
 
-def balance_update(sender, instance, **kwargs):
-    fa12 = FA12.objects.filter(contract=instance).first()
+def balance_update(fa12, user):
+    total = fa12.mint_set.filter(
+        user_id=user.pk,
+    ).aggregate(
+        total=Sum('value')
+    )['total']
+    # todo: add support for burn, transfer etc ...
 
-    if not fa12:
-        return
-
-    user_ids = fa12.mint_set.values_list('user', flat=True).distinct()
-    for user_id in user_ids:
-        total = fa12.mint_set.filter(
-            user_id=user_id
-        ).aggregate(
-            total=Sum('value')
-        )['total']
-        balance, _ = Balance.objects.update_or_create(
-            user_id=user_id,
-            fa12=fa12,
-            defaults=dict(
-                balance=total,
-            ),
-        )
-contract_indexed.connect(balance_update)  # noqa
+    balance, _ = Balance.objects.update_or_create(
+        user_id=user.pk,
+        fa12=fa12,
+        defaults=dict(
+            balance=total,
+        ),
+    )
