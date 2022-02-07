@@ -1,17 +1,10 @@
 import importlib
-import time
+import datetime
 import uuid
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
-from model_utils.managers import (
-    InheritanceManagerMixin,
-    InheritanceQuerySetMixin,
-)
-
-from djwebdapp.signals import contract_indexed
 
 
 SETTINGS = dict(
@@ -144,8 +137,8 @@ class Node(models.Model):
         max_length=100,
         help_text='Node name, generated from endpoint if empty',
     )
-    endpoint = models.CharField(
-        max_length=255,
+    endpoint = models.URLField(
+        help_text='Node endpoint to query',
     )
     is_active = models.BooleanField(
         default=True,
@@ -247,9 +240,14 @@ class Transaction(models.Model):
         null=True,
         blank=True,
     )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
 
     STATE_CHOICES = (
         ('held', _('Held')),
+        ('deleted', _('Deleted during reorg')),
         ('aborted', _('Aborted')),
         ('deploy', _('To deploy')),
         ('deploying', _('Deploying')),
@@ -275,7 +273,9 @@ class Transaction(models.Model):
             int(datetime.datetime.now().strftime('%s')),
         ])
         self.save()
-        logger.info(f'Tx({self}).state set to {self.state}')
+        self.blockchain.provider.logger.info(
+            f'{type(self)}({self}).state set to {self.state}'
+        )
         # ensure commit happens, is it really necessary ?
         # not sure why not
         # django.db.connection.close()
@@ -292,24 +292,6 @@ class SmartContract(Transaction):
         blank=True,
         null=True,
     )
-    storage = models.JSONField(
-        default=dict,
-        blank=True,
-    )
-
-    def sync(self, tries=10):
-        while tries:
-            result = self.provider.sync_contract(self)
-            if not result:
-                tries -= 1
-                time.sleep(.1)
-                continue
-
-            contract_indexed.send(
-                sender=type(self),
-                instance=self,
-            )
-            return True
 
     def call(self, **kwargs):
         return Call.objects.create(
@@ -333,12 +315,7 @@ class Call(Transaction):
         blank=True,
     )
     args = models.JSONField(
-        default=list,
-        null=True,
-        blank=True,
-    )
-    storage = models.JSONField(
-        default=dict,
+        default=None,
         null=True,
         blank=True,
     )

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pymich.michelson_types import Nat, Address, Contract
+from pymich.michelson_types import Address, BigMap, Contract, Nat
 from pymich.stdlib import SENDER
 
 
@@ -17,5 +17,5 @@ class FA12(Contract):
 
         self.tokens[_to] = self.tokens.get(_to, Nat(0)) + value
 
-    def getTotalSupply(self) -> Nat:
+    def getTotalSupply(self) -> Nat:  # noqa
         return self.total_supply

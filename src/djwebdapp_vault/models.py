@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 from django.db.models import signals
 
@@ -21,4 +20,6 @@ def generate(sender, instance, **kwargs):
         return
     mnemonic = Mnemonic('english').generate(128)
     instance.mnemonic = mnemonic
+
+
 signals.pre_save.connect(generate, sender=Wallet)
