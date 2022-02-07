@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'djwebdapp',
     'djwebdapp_vault',
+    'djwebdapp_tezos',
     'djwebdapp_tezos_example',
 ]
 

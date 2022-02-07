@@ -8,28 +8,14 @@ build:
     - docker build -f Dockerfile -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
     - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
 
-tzkt-api-build:
-  image: docker:dind
-  stage: build
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -f src/djwebdapp_tezos_example/Dockerfile.tzkt-api -t $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api .
-    - docker push $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api
-
-test:
+qa:
   stage: test
-  image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-  script: py.test -sv tests
+  script: flake8 --exclude migrations src djwebdapp_demo
 
 # The following job tests tezos, it's a bit complicated to debug so I'll
 # document it here.
 #
-# First, build a tzkt-api image that exposes port 5000, at least until they
-# merge https://github.com/baking-bad/tzkt/pull/79 as such:
-#
-# docker build -f src/djwebdapp_tezos_example/Dockerfile.tzkt-api -t tzkt-api .
-#
-# Also, build the local test image as such:
+# Build the local test image as such:
 #
 # docker build -t djwebdapp .
 #
@@ -59,7 +45,7 @@ tezos:
   - alias: tzkt-db
     name: postgres:13
   - alias: tzkt-api
-    name: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}tzkt-api
+    name: bakingbad/tzkt-api:latest
   - alias: tzkt-sync
     name: bakingbad/tzkt-sync:latest
   - alias: tzlocal

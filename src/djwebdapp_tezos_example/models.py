@@ -56,6 +56,7 @@ def call_mint(sender, instance, **kwargs):
 
     if not instance.sender.owner:
         # let's auto-register the sender user here
+        # (not necessary, but for the sake of the example)
         instance.sender.owner, _ = User.objects.get_or_create(
             username=instance.sender.address,
         )

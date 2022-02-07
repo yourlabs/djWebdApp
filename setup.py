@@ -8,6 +8,8 @@ extras_require = dict(
     ],
     tezos=[
         'pytezos',
+    ],
+    tzkt=[
         'dipdup',
     ],
     binary=[

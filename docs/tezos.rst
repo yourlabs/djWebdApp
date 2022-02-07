@@ -22,8 +22,8 @@ the following command:
    pip install pymich
    pymich example.py example.json
 
-Local blockchain and tzkt API
-=============================
+Local blockchain
+================
 
 Instead of using the mainnet, we're going to use a local blockchain, so that
 you learn how to test locally. Also, we're going to setup a local tzkt API,
@@ -39,13 +39,10 @@ by hostname from now on, which is why we add the following to
 
 .. code-block::
 
-   127.0.0.1 tzlocal tzkt-api
+   127.0.0.1 tzlocal
 
-You should then have:
-
-* a local tezos sandbox on ``tzlocal:8732`` which autobakes every second (like
-  geth development mode)
-* a local tzkt API on ``tzkt-api:5000``
+You should then have a local tezos sandbox on ``tzlocal:8732`` which autobakes
+every second (like geth development mode).
 
 Example contract deployment
 ===========================
@@ -98,16 +95,6 @@ declare ``address='<YOUR CONTRACT ADDRESS>`` and run the following code:
 
 .. literalinclude:: ../src/djwebdapp_tezos_example/example_index.py
   :language: Python
-
-This will synchronize the contract using the tzkt API. The ``tries`` argument
-is optionnal, and useful for freshly originated contracts, so that it will wait
-until it indexes at least one transaction before returning. ``contract.sync()``
-returns True if at least one transaction was returned by tzkt for this contract
-address.
-
-.. note:: Instead of the above code, we could have added the Blockchain and
-          SmartContract in the admin and called ``./manage.py
-          index_contracts``.
 
 Normalizing incomming data
 ==========================
