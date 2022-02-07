@@ -16,7 +16,12 @@ contract, _ = SmartContract.objects.get_or_create(
 )
 import time
 
-assert contract.sync(tries=100), 'Contract did not sync'
+# in the case of tezos, you could also run ./manage.py tzkt_index_contracts
+# or use the following:
+from django.core import management
+management.call_command('tzkt_index_contracts', tzkt='http://localhost:5000')
+
+#assert contract.sync(tries=100), 'Contract did not sync'
 
 # indexed Call objects:
 assert contract.call_set.count()

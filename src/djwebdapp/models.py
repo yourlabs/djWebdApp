@@ -297,20 +297,6 @@ class SmartContract(Transaction):
         blank=True,
     )
 
-    def sync(self, tries=10):
-        while tries:
-            result = self.provider.sync_contract(self)
-            if not result:
-                tries -= 1
-                time.sleep(.1)
-                continue
-
-            contract_indexed.send(
-                sender=type(self),
-                instance=self,
-            )
-            return True
-
     def call(self, **kwargs):
         return Call.objects.create(
             contract=self,

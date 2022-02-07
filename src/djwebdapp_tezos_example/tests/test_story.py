@@ -7,14 +7,15 @@ from djwebdapp_tezos_example.models import Balance
 
 
 @pytest.mark.django_db
-def test_sync():
+def test_tzkt_sync():
     """
     Test documentation scripts.
 
     This test executes the first snippet of code to deploy a smart contract and
     then the second one which indexes it.
 
-    100% Evil code, don't try this at home.
+    100% Evil code so that test code also serves documentation, don't try this
+    at home.
     """
     from djwebdapp_tezos_example.example_origination import address
     path = os.path.join(os.path.dirname(__file__), '..', 'example_index.py')
