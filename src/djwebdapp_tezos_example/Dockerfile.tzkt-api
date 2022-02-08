@@ -1,2 +1,0 @@
-FROM bakingbad/tzkt-api:latest
-EXPOSE 5000
