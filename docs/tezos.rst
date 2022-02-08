@@ -5,59 +5,43 @@ Example contract
 ================
 
 We will need to instanciate a contract on this blockchain. We'll use a simple
-example in actually pure Python with the PyMich compiler.
+example in actually pure Python that looks like some FA12:
 
-We have an ``example.py`` contract source code and its compiled version in an
-``example.json`` file in ``src/djwebdapp_tezos_example`` directory. This is
-what the Python code is like:
-
-.. literalinclude:: ../src/djwebdapp_tezos_example/example.py
+.. literalinclude:: ../src/djwebdapp_example/tezos/FA12.py
   :language: Python
 
-Where you to change it, you would have to recompile it into Micheline JSON with
-the following command:
+We already compiled it, but you can change it and recompile it with the
+following command:
 
 .. code-block:: sh
 
    pip install pymich
-   pymich example.py example.json
+   cd src/djwebdapp_example/tezos
+   pymich FA12.py FA12.json
 
-Local blockchain
-================
+Local tezos blockchain
+======================
 
-Instead of using the mainnet, we're going to use a local blockchain, so that
-you learn how to test locally. Also, we're going to setup a local tzkt API,
-because this is used by the tezos provider to index blockchain data.
-
-We provide a ``docker-compose.yml`` in the ``src/djwebdapp_tezos_example``
-directory of this repository, get in there and run ``docker-compose up``.
-
-As some of us will also want to convert this to `GitLab-CI
-services <https://docs.gitlab.com/ee/ci/services/>`_\ , we'll refer to our services
-by hostname from now on, which is why we add the following to
-``/etc/hosts``\ :
-
-.. code-block::
-
-   127.0.0.1 tzlocal
-
-You should then have a local tezos sandbox on ``tzlocal:8732`` which autobakes
-every second (like geth development mode).
-
-Example contract deployment
-===========================
+.. danger:: Before you begin, make sure you have followed the setup
+            instructions from :ref:`Local blockchains`.
 
 Sandbox ids are predefined and hardcoded, you can find them in the
 `tezos-init-sandboxed-client.sh
 script <https://gitlab.com/tezos/tezos/-/blob/master/src/bin_client/tezos-init-sandboxed-client.sh>`_.
 
-Let's deploy our example contract using ``pytezos``\ , first install pytezos and
-start a python shell:
+Let's deploy our example contract using `pytezos
+<https://pytezos.org>`_, first
+install pytezos and start a python shell with the ``./manage.py shell`` command
+at the root of our repository:
 
 .. code-block:: sh
 
    pip install pytezos
-   python
+   ./manage.py shell
+
+.. note:: The above example also works in a normal Python shell started with
+          the ``python`` command, but we need to be in the Django shell of the
+          demo project to go through this tutorial anyway.
 
 In the shell, do the following to have a pytezos client with a sandbox account:
 
@@ -66,13 +50,13 @@ In the shell, do the following to have a pytezos client with a sandbox account:
    from pytezos import pytezos
    client = pytezos.using(
        key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
-       shell='http://tzlocal:8732',
+       shell='http://localhost:8732',
    )
    client.account()
 
 This will output something like:
 
-.. code-block::
+.. code-block:: json
 
    {'balance': '3997440000000', 'delegate': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 'counter': '0'}
 
@@ -80,58 +64,48 @@ Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting th
 following in our pytezos python shell started above, which you need to start if
 you haven't already to run the following commands:
 
-.. literalinclude:: ../src/djwebdapp_tezos_example/example_origination.py
+.. literalinclude:: ../src/djwebdapp_example/tezos/deploy.py
   :language: Python
 
 This should store the deployed contract address in the address variable, copy
-it because you need it to index the contract in the next section.
+it or leave the shell open because you need it to index the contract in the
+next section.
 
 Indexing a contract
 ===================
 
 Now that we have deployed a contract, and setup ``djwebdapp`` for a local tezos
-node, let's index a contract, also programatically so in ``./manage.py shell``,
-declare ``address='<YOUR CONTRACT ADDRESS>`` and run the following code:
+node, let's index a contract, also programatically in ``./manage.py shell``:
 
-.. literalinclude:: ../src/djwebdapp_tezos_example/example_index.py
+.. literalinclude:: ../src/djwebdapp_example/tezos/index.py
   :language: Python
 
 Normalizing incomming data
 ==========================
 
-In the ``djwebdapp_tezos_example`` app we have created some sample models to
-normalize incomming data, if you want to create your own in your own project
-this completely arbitrary code that would go in the ``models.py`` script in a
-new app you would have created with ``./manage.py startapp``.
+We have created example models in the ``src/djwebdapp_example`` directory:
 
-It defines some arbitrary models, intended to be as simple as possible for the
-sake of the example and at the same time sufficiently close to realistic use
-cases, it registers 2 callbacks for normalization:
+.. literalinclude:: ../src/djwebdapp_example/models.py
+  :language: Python
 
-* ``call_mint``: is connected to the standard django post_save signal for the
-  Call model,
-* ``balance_update``: is connected to the ``djwebdapp.signals.contract_indexed``
-  signal.
+.. note:: You wouldn't have to declare ForeignKeys to other Transaction classes
+          than TezosTransactions, but we'll learn to do inter-blockchain
+          mirroring later in this tutorial, so that's why we have relations to
+          both.
 
-You can verify with the following code in ``./manage.py shell``:
+And declared a function to update the balance of an FA12 contract:
 
-.. code-block:: py
+.. literalinclude:: ../src/djwebdapp_example/balance_update.py
+  :language: Python
 
-   from djwebdapp.models import SmartContract
+Finally, to connect the dots, we are first going to connect a custom callback
+to ``djwebdapp_tezos.models.TezosTransaction``'s ``post_save`` signal to create
+normalized ``Mint`` objects for every ``mint()`` call we index:
 
-   contract.fa12
-   # <FA12: KT1Kie724z2jXbbm9AnTaNYsRJeAbax88Hqb>
+.. literalinclude:: ../src/djwebdapp_example/tezos/mint_normalize.py
+  :language: Python
 
-   contract.fa12.mint_set.all()
-   # <QuerySet [<Mint: mint(tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx, 1000)>]>
+We are now ready to normalize the smart contract we have indexed:
 
-   from djwebdapp_tezos_example.models import Balance
-
-   Balance.objects.all()
-   # <QuerySet [<Balance: tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx balance: 1000>]>
-
-You can see the example source code in question in
-``src/djwebdapp_tezos_example/models.py``:
-
-.. literalinclude:: ../src/djwebdapp_tezos_example/models.py
+.. literalinclude:: ../src/djwebdapp_example/ethereum/normalize.py
   :language: Python

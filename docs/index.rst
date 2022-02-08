@@ -10,6 +10,7 @@
    :caption: Contents:
 
    tezos
+   ethereum
    vault
 
 

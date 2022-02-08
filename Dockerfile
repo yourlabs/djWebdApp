@@ -12,9 +12,9 @@ WORKDIR /app
 COPY setup.py README.rst /app/
 # run a first dependency install prior to moving code that would invalidate the
 # layer
-RUN mkdir /app/src && pip install --editable /app[all]
+RUN mkdir /app/src && pip install --use-deprecated legacy-resolver --editable /app[all]
 COPY src /app/src
-RUN pip install -U --editable /app[all]
+RUN pip install --no-deps --editable /app
 COPY djwebdapp_demo /app/djwebdapp_demo
 COPY manage.py /app
 

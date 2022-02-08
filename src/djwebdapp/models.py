@@ -9,7 +9,8 @@ from django.utils.translation import gettext_lazy as _
 
 SETTINGS = dict(
     PROVIDERS=(
-        ('djwebdapp_tezos.Provider', 'Tezos'),
+        ('djwebdapp_tezos.provider.TezosProvider', 'Tezos'),
+        ('djwebdapp_ethereum.provider.EthereumProvider', 'Ethereum'),
         ('djwebdapp.provider.Success', 'Test that always succeeds'),
         ('djwebdapp.provider.FailDeploy', 'Test that fails deploy'),
         ('djwebdapp.provider.FailWatch', 'Test that fails watch'),
@@ -204,13 +205,6 @@ class Transaction(models.Model):
         'Blockchain',
         on_delete=models.CASCADE,
     )
-    sender = models.ForeignKey(
-        'Address',
-        related_name='%(model_name)s_sent',
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-    )
     datetime = models.DateTimeField(
         null=True,
         blank=True,
@@ -265,6 +259,67 @@ class Transaction(models.Model):
     error = models.TextField(blank=True)
     history = models.JSONField(default=list)
     states = [i[0] for i in STATE_CHOICES]
+    amount = models.PositiveIntegerField(
+        db_index=True,
+        null=True,
+        blank=True,
+    )
+    args = models.JSONField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text='Arguments, appliable to deployments or method calls',
+    )
+    address = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text='Contract address, appliable to method calls',
+    )
+    # this is actually defined in each blockchain-specific subclass, left
+    # commented here for educationnal purpose
+    # contract = models.ForeignKey(
+    #     'self',
+    #     on_delete=models.CASCADE,
+    #     related_name='call_set',
+    #     null=True,
+    #     blank=True,
+    #     help_text='Smart contract, appliable to method call',
+    # )
+    function = models.CharField(
+        max_length=100,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text='Function name, if this is a method call',
+    )
+    sender = models.ForeignKey(
+        'Address',
+        related_name='%(model_name)s_sent',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
+    receiver = models.ForeignKey(
+        'Address',
+        related_name='%(model_name)s_received',
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        help_text='Receiver address, if this is a transfer',
+    )
+    kind = models.CharField(
+        db_index=True,
+        blank=True,
+        null=True,
+        max_length=8,
+        choices=(
+            ('contract', 'Contract'),
+            ('call', 'Call'),
+            ('transfer', 'Transfer'),
+        )
+    )
 
     def state_set(self, state):
         self.state = state
@@ -274,7 +329,7 @@ class Transaction(models.Model):
         ])
         self.save()
         self.blockchain.provider.logger.info(
-            f'{type(self)}({self}).state set to {self.state}'
+            f'{self}.state_set({state})'
         )
         # ensure commit happens, is it really necessary ?
         # not sure why not
@@ -285,52 +340,12 @@ class Transaction(models.Model):
     def provider(self):
         return self.blockchain.provider
 
-
-class SmartContract(Transaction):
-    address = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-    )
-
-    def call(self, **kwargs):
-        return Call.objects.create(
-            contract=self,
-            **kwargs
-        )
-
-
-class Call(Transaction):
-    contract = models.ForeignKey(
-        'SmartContract',
-        on_delete=models.CASCADE,
-        related_name='call_set',
-        null=True,
-        blank=True,
-    )
-    function = models.CharField(
-        max_length=100,
-        db_index=True,
-        null=True,
-        blank=True,
-    )
-    args = models.JSONField(
-        default=None,
-        null=True,
-        blank=True,
-    )
-
-
-class Transfer(Transaction):
-    receiver = models.ForeignKey(
-        'Address',
-        related_name='%(model_name)s_received',
-        blank=True,
-        null=True,
-        on_delete=models.CASCADE,
-    )
-    amount = models.PositiveIntegerField(
-        db_index=True,
-        null=True,
-        blank=True,
-    )
+    def save(self, *args, **kwargs):
+        if not self.kind:
+            if not self.function and not self.receiver:
+                self.kind = 'contract'
+            elif self.function or self.contract:
+                self.kind = 'call'
+            elif self.amount:
+                self.kind = 'transfer'
+        return super().save(*args, **kwargs)

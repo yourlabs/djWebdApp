@@ -14,16 +14,14 @@ the blockchain, with the following features usable independently:
 * blockchain writer
 * blockchain data normalization
 * metamask authentication backend
-* multiple blockchain support
+* multiple blockchain support (tezos & ethereum so far)
+* inter-blockchain contract synchronisation
 
 In addition to these features, djWebdApp differenciates itself from indexers
 like dipdup because it is extensible: it's just a module you add to your Django
 project like any other Django App, in which you can add models, endpoints, and
 have an admin interface for free, and so on, benefiting from the `vast Django
 ecosystem of apps <https://djangopackages.org/>`_.
-
-Currently, djwebdapp supports Tezos, new blockchain providers will be
-implemented along the way.
 
 Getting started
 ===============
@@ -61,6 +59,37 @@ For this tutorial, we'll use the ``djwebdapp_demo`` project:
 * run ``./manage.py runserver`` to start a server on http://localhost:8000/admin
 * run ``./manage.py shell`` to run Python commands
 
+.. _Local blockchains:
+
+Local blockchains
+-----------------
+
+Instead of using mainnets for development, we're going to use a local
+blockchains, so that we can work completely locally.
+
+We provide a ``docker-compose.yml`` in the root directory of this repository,
+run ``docker-compose up`` to start it.
+
+As some of us will also want to convert this to `GitLab-CI
+services <https://docs.gitlab.com/ee/ci/services/>`_\ , we'll refer to our services
+by hostname from now on, which is why we add the following to
+``/etc/hosts``\ :
+
+.. code-block::
+
+   127.0.0.1 tzlocal tzkt-api ethlocal
+
+You should then have:
+
+- a local ethereum HTTP RPC API on ``ethlocal:8545`` with a WebSocket on
+  ``ethlocal:30303``,
+- a local tezos sandbox on ``tzlocal:8732`` which autobakes every second,
+  useable like geth development mode.
+- a local tzkt indexer which is completely optionnal.
+
+See documentation for **Example contract deployment** in each blockchain
+specific documentation pages for more pointers.
+
 Custom project
 --------------
 
@@ -68,8 +97,10 @@ Instead of the demo project, you can also create your own project, instead of
 the first step of cloning do:
 
 * run ``django-admin startproject your_project_name``
-* in ``your_project_name/your_project_name/settings.py``, add ``djwebdapp`` to
-  ``INSTALLED_APPS``,
+* in ``your_project_name/your_project_name/settings.py``, add to
+  ``INSTALLED_APPS``: ``'djwebdapp', 'djwebdapp_tezos',
+  'djwebdapp_ethereum'``... See ``djwebdapp_demo/settings.py`` for other
+  INSTALLED_APPS you can use
 * proceed with the next steps ``migrate`, ``createsuperuser``, ``runserver``
   ...
 
