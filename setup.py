@@ -6,6 +6,9 @@ extras_require = dict(
         'djfernet>=0.7.2',
         'mnemonic',
     ],
+    ethereum=[
+        'web3',
+    ],
     tezos=[
         'pytezos',
     ],

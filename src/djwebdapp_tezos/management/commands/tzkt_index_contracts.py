@@ -3,7 +3,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 from dipdup.datasources.tzkt.datasource import TzktDatasource
 from django.core.management.base import BaseCommand
 from djwebdapp.models import Address
-from djwebdapp.models import SmartContract
+from djwebdapp_tezos.models import TezosTransaction
 from djwebdapp.signals import contract_indexed
 
 
@@ -44,7 +44,7 @@ class Command(BaseCommand):
         tzkt = options['tzkt']
         tries = options['tries']
 
-        contracts = SmartContract.objects.filter(
+        contracts = TezosTransaction.objects.filter(
             blockchain__is_active=True,
             blockchain__provider_class__icontains='tezos',
         ).select_related('blockchain')

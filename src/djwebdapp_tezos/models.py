@@ -1,45 +1,37 @@
 from pytezos import ContractInterface
 
-from djwebdapp.signals import call_indexed, contract_indexed
+from django.db import models
+from django.db.models import signals
+from django.dispatch import receiver
+
+from djwebdapp.models import Transaction
 
 
-def contract_indexed_call_args(sender, instance, **kwargs):
-    """
-    Fill args for calls indexed prior to contract indexation.
-    """
-    if 'tezos' not in instance.blockchain.provider_class:
-        return
-
-    calls = instance.call_set.filter(function=None)
-    if not len(calls):
-        # no calls to fix
-        return
-
-    interface = ContractInterface.from_micheline(
-        instance.metadata['script']['code']
+class TezosTransaction(Transaction):
+    contract = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='call_set',
+        null=True,
+        blank=True,
+        help_text='Smart contract, appliable to method call',
+    )
+    micheline = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text='Smart contract Micheline, if this is a smart contract',
     )
 
-    for call in calls:
-        call.function = call.metadata['parameters']['entrypoint']
-        method = getattr(interface, call.function)
-        args = method.decode(call.metadata['parameters']['value'])
-        call.args = args[call.function]
-        call.save()
-contract_indexed.connect(contract_indexed_call_args)  # noqa
+    @property
+    def interface(self):
+        return ContractInterface.from_micheline(self.micheline)
 
 
-def call_indexed_call_args(sender, instance, **kwargs):
-    """
-    Fill args for call if their contract has been indexed.
-    """
-    if 'script' not in instance.contract.metadata:
-        # this call args will be fixed by contract_indexed_call_args
+@receiver(signals.pre_save, sender=TezosTransaction)
+def contract_micheline(sender, instance, **kwargs):
+    if not instance.address or instance.micheline:
         return
-    interface = ContractInterface.from_micheline(
-        instance.contract.metadata['script']['code']
-    )
-    instance.function = instance.metadata['parameters']['entrypoint']
-    method = getattr(interface, instance.function)
-    args = method.decode(instance.metadata['parameters']['value'])
-    instance.args = args[instance.function]
-call_indexed.connect(call_indexed_call_args)  # noqa
+
+    interface = instance.blockchain.provider.client.contract(instance.address)
+    instance.micheline = interface.to_micheline()

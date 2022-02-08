@@ -1,6 +1,8 @@
 djWebdApp Vault Documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. danger:: This feature is not ready yet, this is a draft plan.
+
 Setup
 =====
 
