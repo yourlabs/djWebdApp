@@ -45,20 +45,15 @@ at the root of our repository:
 
 In the shell, do the following to have a pytezos client with a sandbox account:
 
-.. code-block:: py
-
-   from pytezos import pytezos
-   client = pytezos.using(
-       key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
-       shell='http://localhost:8732',
-   )
-   client.account()
+.. literalinclude:: ../src/djwebdapp_example/tezos/deploy.py
+  :language: Python
 
 This will output something like:
 
-.. code-block:: json
+.. code-block:: python
 
-   {'balance': '3997440000000', 'delegate': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 'counter': '0'}
+    >> client.account()
+    {'balance': '3997440000000', 'delegate': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 'counter': '0'}
 
 Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting the
 following in our pytezos python shell started above, which you need to start if

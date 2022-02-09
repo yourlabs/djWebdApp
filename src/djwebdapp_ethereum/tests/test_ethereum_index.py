@@ -12,6 +12,7 @@ def test_index(include):
     """
 
     variables = {}
+    include('djwebdapp_example/ethereum/client.py', variables)
     include('djwebdapp_example/ethereum/deploy.py', variables)
     include('djwebdapp_example/ethereum/index.py', variables)
 

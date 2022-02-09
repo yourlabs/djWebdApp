@@ -42,17 +42,8 @@ Let's deploy our example contract using `Web3py
 
 In the shell, make sure your default account is provisionned properly:
 
-.. code-block:: python
-
-    from web3 import Web3
-    # use local blockchain with default account
-    w3 = Web3(Web3.HTTPProvider('http://localhost:8545'))
-    # enable support for geth --dev sandbox
-    from web3.middleware import geth_poa_middleware
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-    w3.eth.default_account = w3.eth.accounts[0]
-    w3.eth.default_account
-    w3.eth.get_balance(w3.eth.default_account)
+.. literalinclude:: ../src/djwebdapp_example/ethereum/client.py
+  :language: Python
 
 This will output something like:
 
