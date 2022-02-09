@@ -1,2 +1,2 @@
-sphinx-material
+furo
 .[vault,tezos,test]

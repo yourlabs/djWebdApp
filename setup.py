@@ -30,7 +30,9 @@ extras_require = dict(
 )
 
 extras_require['all'] = []
-for deps in extras_require.values():
+for name, deps in extras_require.items():
+    if name == 'binary':
+        continue
     extras_require['all'] += deps
 
 
