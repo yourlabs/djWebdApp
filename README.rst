@@ -1,6 +1,8 @@
 djWebdApp
 ~~~~~~~~~
 
+**[Documentation](https://djwebdapp.rtfd.io)**
+
 Django is a great web application framework "for perfectionists with deadlines".
 
 A dApp is an app running on the blockchain: a smart contract on which users can
@@ -39,11 +41,9 @@ You may use the demo project or create your own and install djwebdapp there.
 Install
 -------
 
-To install djwebdapp with all optional dependencies:
+To install djwebdapp with all optional dependencies::
 
-```
-pip install djwebdapp[all]
-```
+    pip install djwebdapp[all]
 
 See setup.py's extra_requires for other possibilities.
 
@@ -73,9 +73,7 @@ run ``docker-compose up`` to start it.
 As some of us will also want to convert this to `GitLab-CI
 services <https://docs.gitlab.com/ee/ci/services/>`_\ , we'll refer to our services
 by hostname from now on, which is why we add the following to
-``/etc/hosts``\ :
-
-.. code-block::
+``/etc/hosts``::
 
    127.0.0.1 tzlocal tzkt-api ethlocal
 
