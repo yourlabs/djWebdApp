@@ -1,7 +1,8 @@
 djWebdApp
 ~~~~~~~~~
 
-**[Documentation](https://djwebdapp.rtfd.io)**
+`**Documentation**
+<https://djwebdapp.rtfd.io>`_
 
 Django is a great web application framework "for perfectionists with deadlines".
 
