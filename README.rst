@@ -44,7 +44,10 @@ Install
 
 To install djwebdapp with all optional dependencies::
 
-    pip install djwebdapp[all]
+    pip install djwebdapp[all][binary]
+
+Don't use ``[binary]`` right there if you prefer to install compiled python
+packages from your system package manager.
 
 See setup.py's extra_requires for other possibilities.
 
