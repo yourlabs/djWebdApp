@@ -3,12 +3,10 @@ import pytest
 
 @pytest.mark.django_db
 def test_normalize(include):
-    variables = {}
-    include('djwebdapp_example/tezos/client.py', variables)
-    include('djwebdapp_example/tezos/deploy.py', variables)
-    include('djwebdapp_example/tezos/blockchain.py', variables)
-    include('djwebdapp_example/tezos/index.py', variables)
-    include('djwebdapp_example/tezos/normalize.py', variables)
+    variables = include(
+        'djwebdapp_example/tezos',
+        'client', 'deploy', 'blockchain', 'index', 'normalize',
+    )
 
     contract = variables['contract']
 

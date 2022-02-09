@@ -6,11 +6,10 @@ from djwebdapp_tezos.models import TezosTransaction
 
 @pytest.mark.django_db
 def test_index(include):
-    variables = {}
-    include('djwebdapp_example/tezos/client.py', variables)
-    include('djwebdapp_example/tezos/deploy.py', variables)
-    include('djwebdapp_example/tezos/blockchain.py', variables)
-    include('djwebdapp_example/tezos/index.py', variables)
+    variables = include(
+        'djwebdapp_example/tezos',
+        'client', 'deploy', 'blockchain', 'index',
+    )
     contract = variables['contract']
 
     assert contract.call_set.count() == 1
@@ -27,10 +26,10 @@ def test_index(include):
 
 @pytest.mark.django_db
 def test_tzkt(include):
-    variables = {}
-    include('djwebdapp_example/tezos/client.py', variables)
-    include('djwebdapp_example/tezos/deploy.py', variables)
-    include('djwebdapp_example/tezos/blockchain.py', variables)
+    variables = include(
+        'djwebdapp_example/tezos',
+        'client', 'deploy', 'blockchain',
+    )
 
     contract, _ = TezosTransaction.objects.get_or_create(
         blockchain=variables['blockchain'],
