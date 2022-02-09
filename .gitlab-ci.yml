@@ -12,6 +12,12 @@ qa:
   stage: test
   script: flake8 --exclude migrations,tezos,ethereum src djwebdapp_demo
 
+docs:
+  stage: test
+  script:
+  - pip install sphinx -r docs/requirements.txt
+  - cd docs && make html SPHINXOPTS="-W --keep-going -n"
+
 # The following job tests tezos, it's a bit complicated to debug so I'll
 # document it here.
 #
