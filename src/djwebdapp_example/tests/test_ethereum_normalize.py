@@ -3,12 +3,10 @@ import pytest
 
 @pytest.mark.django_db
 def test_normalize(include):
-    variables = {}
-    include('djwebdapp_example/ethereum/client.py', variables)
-    include('djwebdapp_example/ethereum/deploy.py', variables)
-    include('djwebdapp_example/ethereum/blockchain.py', variables)
-    include('djwebdapp_example/ethereum/index.py', variables)
-    include('djwebdapp_example/ethereum/normalize.py', variables)
+    variables = include(
+        'djwebdapp_example/ethereum',
+        'client', 'deploy', 'blockchain', 'index', 'normalize',
+    )
 
     contract = variables['contract']
 

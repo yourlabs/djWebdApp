@@ -10,12 +10,10 @@ def test_index(include):
 
     See djwebdapp_tezos.tests.test_tezos_index.test_index docstring.
     """
-
-    variables = {}
-    include('djwebdapp_example/ethereum/client.py', variables)
-    include('djwebdapp_example/ethereum/deploy.py', variables)
-    include('djwebdapp_example/ethereum/blockchain.py', variables)
-    include('djwebdapp_example/ethereum/index.py', variables)
+    variables = include(
+        'djwebdapp_example/ethereum',
+        'client', 'deploy', 'blockchain', 'index',
+    )
 
     contract = EthereumTransaction.objects.get(address=variables['address'])
 
