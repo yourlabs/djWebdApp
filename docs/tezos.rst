@@ -5,7 +5,9 @@ Example contract
 ================
 
 We will need to instanciate a contract on this blockchain. We'll use a simple
-example in actually pure Python that looks like some FA12:
+example that looks like some FA12, in Pure Python (rather than "Smart" Python),
+thanks to Python to Michelson compiler by Thomas Binetruy-Pic, based on Python
+AST, Pytezos, and an original idea by your favorite open source zealot:
 
 .. literalinclude:: ../src/djwebdapp_example/tezos/FA12.py
   :language: Python
