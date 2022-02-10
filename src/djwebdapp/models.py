@@ -1,10 +1,19 @@
-import importlib
 import datetime
+import importlib
+import time
 import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import signals
+from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from fernet_fields import EncryptedBinaryField
+from model_utils.managers import InheritanceManager
+
+from .signals import contract_deployed
 
 
 SETTINGS = dict(
@@ -19,7 +28,7 @@ SETTINGS = dict(
 SETTINGS.update(getattr(settings, 'DJBLOCKCHAIN', {}))
 
 
-class Address(models.Model):
+class Account(models.Model):
     """
     An account address on a blockchain.
 
@@ -55,8 +64,8 @@ class Address(models.Model):
         on_delete=models.CASCADE,
     )
     balance = models.DecimalField(
-        max_digits=18,
-        decimal_places=9,
+        max_digits=80,
+        decimal_places=18,
         blank=True,
         editable=False,
         default=0,
@@ -67,6 +76,42 @@ class Address(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    secret_key = EncryptedBinaryField()
+    revealed = models.BooleanField(default=False)
+    counter = models.PositiveIntegerField(null=True)
+    last_level = models.PositiveIntegerField(null=True)
+
+    objects = InheritanceManager()
+
+    def __str__(self):
+        return self.name or self.address
+
+    @property
+    def provider(self):
+        return self.blockchain.provider_cls(wallet=self)
+
+    def refresh_balance(self, commit=True):
+        new_balance = self.blockchain.provider.get_balance(self.address)
+        if new_balance != self.balance:
+            self.balance = new_balance
+            if commit:
+                self.save()
+        return self.balance
+
+
+@receiver(signals.pre_save, sender=Account)
+def setup(sender, instance, **kwargs):
+    if instance.secret_key and not instance.address:
+        if hasattr(instance.provider, 'get_address'):
+            # for providers which support it
+            instance.address = instance.provider.get_address()
+
+    elif not instance.address and not instance.secret_key:
+        instance.address, instance.secret_key = \
+            instance.blockchain.provider.generate_secret_key()
+
+    if not instance.balance:
+        instance.refresh_balance(commit=False)
 
 
 class Blockchain(models.Model):
@@ -105,10 +150,6 @@ class Blockchain(models.Model):
         null=True,
         help_text='Lowest indexed level',
     )
-    confirmation_blocks = models.IntegerField(
-        default=0,
-        help_text='Number of blocks before considering a transaction written',
-    )
     configuration = models.JSONField(
         default=dict,
         blank=True,
@@ -118,12 +159,19 @@ class Blockchain(models.Model):
         return self.name
 
     @property
-    def provider(self):
+    def provider_cls(self):
         parts = self.provider_class.split('.')
-        mod = importlib.import_module(
-            '.'.join(parts[:-1])
-        )
-        return getattr(mod, parts[-1])(self)
+        mod = importlib.import_module('.'.join(parts[:-1]))
+        return getattr(mod, parts[-1])
+
+    @property
+    def provider(self):
+        return self.provider_cls(blockchain=self)
+
+    def wait(self, blocks):
+        wait_level = self.provider.head + blocks
+        while self.provider.head < wait_level:
+            time.sleep(.1)
 
 
 class Node(models.Model):
@@ -230,9 +278,16 @@ class Transaction(models.Model):
         blank=True,
     )
     last_fail = models.DateTimeField(
-        auto_now_add=True,
         null=True,
         blank=True,
+    )
+    max_fails = models.PositiveIntegerField(
+        default=10,
+        help_text='Number of failures to retry before aborting transaction',
+    )
+    has_code = models.BooleanField(
+        default=True,
+        help_text='Check to activate this blockchain',
     )
     metadata = models.JSONField(
         default=dict,
@@ -277,8 +332,8 @@ class Transaction(models.Model):
         db_index=True,
         help_text='Contract address, appliable to method calls',
     )
-    # this is actually defined in each blockchain-specific subclass, left
-    # commented here for educationnal purpose
+    contract_address = models.CharField(max_length=255, null=True, blank=True)
+    # This relation is actually in blockchain specific subclasses.
     # contract = models.ForeignKey(
     #     'self',
     #     on_delete=models.CASCADE,
@@ -295,14 +350,14 @@ class Transaction(models.Model):
         help_text='Function name, if this is a method call',
     )
     sender = models.ForeignKey(
-        'Address',
+        'Account',
         related_name='%(model_name)s_sent',
         null=True,
         blank=True,
         on_delete=models.CASCADE,
     )
     receiver = models.ForeignKey(
-        'Address',
+        'Account',
         related_name='%(model_name)s_received',
         blank=True,
         null=True,
@@ -316,10 +371,27 @@ class Transaction(models.Model):
         max_length=8,
         choices=(
             ('contract', 'Contract'),
-            ('call', 'Call'),
+            ('function', 'Function call'),
             ('transfer', 'Transfer'),
         )
     )
+    error = models.TextField(
+        null=True,
+        blank=True,
+    )
+    objects = InheritanceManager()
+
+    def __str__(self):
+        if self.name:
+            return str(self.name)
+        elif self.hash:
+            return str(self.hash)
+        elif self.function:
+            return f'{self.name}.{self.function}()'
+        elif self.amount:
+            return f'{self.amount}xTZ'
+        else:
+            return str(self.pk)
 
     def state_set(self, state):
         self.state = state
@@ -340,12 +412,59 @@ class Transaction(models.Model):
     def provider(self):
         return self.blockchain.provider
 
+    def deploy(self):
+        self.provider.logger.info(f'Deploying {self}')
+        self.state_set('deploying')
+        try:
+            self.sender.provider.deploy(self)
+        except Exception:
+            self.sender.provider.logger.exception('Deploy fail')
+            self.last_fail = timezone.now()
+
+            deploys_since_last_start = 0
+            for logentry in reversed(self.history):
+                if logentry[0] == 'deploying':
+                    deploys_since_last_start += 1
+                elif logentry[0] == 'aborted':
+                    break
+
+            if deploys_since_last_start >= self.max_fails:
+                message = f'Aborting because >= {self.max_fails} failures,'
+                self.error = ' '.join([
+                    message,
+                    'last error:',
+                    self.error or '',
+                ])
+                self.state_set('aborted')
+            else:
+                self.state_set('retrying')
+            return False
+        else:
+            self.last_fail = None
+            self.error = ''
+            if self.kind == 'contract':
+                self.state_set('watching')
+            else:
+                self.state_set('done')
+            contract_deployed.send(
+                sender=type(self),
+                instance=self,
+            )
+            return True
+
     def save(self, *args, **kwargs):
         if not self.kind:
             if not self.function and not self.receiver:
                 self.kind = 'contract'
-            elif self.function or self.contract:
-                self.kind = 'call'
+            elif self.function:
+                self.kind = 'function'
             elif self.amount:
                 self.kind = 'transfer'
+
+        if not self.contract_address and getattr(self, 'contract_id', ''):
+            self.contract_address = self.contract.contract_address
+
+        if not self.blockchain_id and self.sender_id:
+            self.blockchain_id = self.sender.blockchain_id
+
         return super().save(*args, **kwargs)

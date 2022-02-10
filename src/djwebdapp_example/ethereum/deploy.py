@@ -1,7 +1,4 @@
 # actually deploy the contract:
-bytecode = open('src/djwebdapp_example/ethereum/FA12.bin', 'r').read()
-abi = open('src/djwebdapp_example/ethereum/FA12.abi', 'r').read()
-
 contract = client.eth.contract(abi=abi, bytecode=bytecode)
 contract_hash = contract.constructor('Your New Token', 'YNT').transact()
 receipt = client.eth.wait_for_transaction_receipt(contract_hash)

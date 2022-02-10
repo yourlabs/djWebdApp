@@ -18,8 +18,8 @@ def mint_normalize_tezos(sender, instance, **kwargs):
         # no FA12 normalized object for this contract? bail out!
         return
 
-    # figure out the beneficiary Address based on the mint call arg _to
-    beneficiary = instance.blockchain.address_set.get(
+    # figure out the beneficiary Account based on the mint call arg _to
+    beneficiary = instance.blockchain.account_set.get(
         address=instance.args['_to'],
     )
 

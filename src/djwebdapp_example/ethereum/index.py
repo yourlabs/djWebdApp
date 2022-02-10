@@ -11,8 +11,10 @@ contract = EthereumTransaction.objects.create(
 )
 assert contract.kind == 'contract'
 
-# Let's index the blockchain
+# But calls have not yet been synchronized
 assert not contract.call_set.count()
+
+# Let's index the blockchain
 blockchain.provider.index()
 
 # Refresh our contract model object

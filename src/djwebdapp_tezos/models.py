@@ -23,6 +23,11 @@ class TezosTransaction(Transaction):
         help_text='Smart contract Micheline, if this is a smart contract',
     )
 
+    def save(self, *args, **kwargs):
+        if self.micheline:
+            self.has_code = True
+        return super().save(*args, **kwargs)
+
     @property
     def interface(self):
         return ContractInterface.from_micheline(self.micheline)

@@ -1,27 +1,47 @@
+from decimal import Decimal
 import logging
 
 from django.db.models import Q
+from django.core.exceptions import ValidationError
 
-from djwebdapp.models import Address
+from djwebdapp.exceptions import PermanentError
+from djwebdapp.models import Account
 from djwebdapp.provider import Provider
 from djwebdapp.signals import call_indexed, contract_indexed
 
 from djwebdapp_tezos.models import TezosTransaction
 
-from pytezos import pytezos
+from pytezos import pytezos, Key
 
 
 class TezosProvider(Provider):
     logger = logging.getLogger('djwebdapp_tezos')
     transaction_class = TezosTransaction
 
-    def get_client(self, wallet=None):
-        return pytezos.using(shell=self.blockchain.node_set.first().endpoint)
+    def generate_secret_key(self):
+        key = Key.generate()
+        return key.public_key_hash(), key.secret_exponent
+
+    def get_client(self, **kwargs):
+        if self.wallet:
+            kwargs['key'] = Key.from_secret_exponent(self.wallet.secret_key)
+        return pytezos.using(
+            shell=self.blockchain.node_set.first().endpoint,
+            **kwargs,
+        )
 
     @property
     def head(self):
         return self.client.shell.head.metadata(
-            )['level_info']['level_position']
+            )['level_info']['level']
+
+    def get_address(self):
+        return self.client.key.public_key_hash()
+
+    def get_balance(self, address=None):
+        return Decimal(
+            self.client.account(address or self.get_address())['balance']
+        )
 
     def index_level(self, level):
         block = self.client.shell.blocks[level]
@@ -59,6 +79,9 @@ class TezosProvider(Provider):
         contract.hash = hash
         contract.gas = content['fee']
         contract.metadata = content
+        contract.sender, _ = self.blockchain.account_set.get_or_create(
+            address=op['contents'][0]['source']
+        )
         contract_indexed.send(
             sender=type(contract),
             instance=contract,
@@ -71,7 +94,7 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
             address=content['destination'],
         )
-        call = contract.call_set.filter(
+        call = contract.call_set.select_subclasses().filter(
             hash=op['hash'],
         ).first()
         if not call:
@@ -84,7 +107,7 @@ class TezosProvider(Provider):
         call.metadata = content
         call.gas = content['fee']
         call.level = level
-        call.sender, _ = Address.objects.get_or_create(
+        call.sender, _ = Account.objects.get_or_create(
             address=content['source'],
             blockchain=self.blockchain,
         )
@@ -97,3 +120,76 @@ class TezosProvider(Provider):
             instance=call,
         )
         call.state_set('done')
+
+    def transfer(self, transaction):
+        """
+        rpc error if balance too low :
+        RpcError ({'amount': '120000000000000000',
+              'balance': '3998464237867',
+              'contract': 'tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN',
+              'id': 'proto.006-PsCARTHA.contract.balance_too_low',
+              'kind': 'temporary'},)
+        """
+        tx = self.client.transaction(
+            destination=transaction.receiver.address,
+            amount=transaction.amount,
+        ).autofill().sign()
+        result = self.write_transaction(tx, transaction)
+        return result
+
+    def deploy(self, transaction):
+        if transaction.kind == 'contract':
+            self.originate(transaction)
+        elif transaction.kind == 'function':
+            self.send(transaction)
+        elif transaction.kind == 'transfer':
+            self.transfer(transaction)
+        else:
+            transaction.error = f'Unknown transaction kind {transaction.kind}'
+            transaction.state_set('failed')
+            return
+
+        transaction.sender.last_level = self.head
+        transaction.sender.save()
+
+    def originate(self, transaction):
+        self.logger.debug(
+            f'{transaction}.originate({transaction.args}): start')
+
+        if not self.client.balance():
+            raise ValidationError(
+                f'{transaction.sender.address} needs more than 0 tezies')
+
+        tx = self.client.origination(dict(
+            code=transaction.micheline,
+            storage=transaction.args,
+        )).autofill().sign()
+
+        self.write_transaction(tx, transaction)
+        print(f'WROTE {self.head}')
+
+        self.logger.info(
+            f'{transaction}.deploy({transaction.args}): success!')
+
+    def write_transaction(self, tx, transaction):
+        origination = tx.inject(
+            _async=False,
+        )
+        transaction.gas = origination['contents'][0]['fee']
+        transaction.hash = origination['hash']
+        transaction.level = self.head
+        transaction.save()
+
+    def send(self, transaction):
+        self.logger.debug(
+            f'{transaction}: counter = {self.client.account()["counter"]}'
+        )
+        ci = self.client.contract(transaction.contract.address)
+        method = getattr(ci, transaction.function)
+        try:
+            tx = method(*transaction.args)
+        except ValueError as e:
+            raise PermanentError(*e.args)
+        result = self.write_transaction(tx, transaction)
+        self.logger.debug(f'{transaction}({transaction.args}): {result}')
+        return result

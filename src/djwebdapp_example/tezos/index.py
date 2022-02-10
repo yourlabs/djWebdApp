@@ -11,9 +11,11 @@ assert contract.kind == 'contract'
 # Unspecified, micheline was downloaded automatically
 assert contract.micheline
 
+# But calls have not yet been synchronized
+assert not contract.call_set.count()
+
 # Let's index the blockchain
 # in the case of tezos, you could also run ./manage.py tzkt_index_contracts
-assert not contract.call_set.count()
 blockchain.provider.index()
 
 # Refresh our contract model object
