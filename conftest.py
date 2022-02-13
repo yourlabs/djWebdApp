@@ -1,5 +1,6 @@
 import pytest
 import os
+import sys
 
 
 def evil(path, *scripts, variables=None):
@@ -27,9 +28,23 @@ def evil(path, *scripts, variables=None):
         path,
     )
     for script in scripts:
-        with open(os.path.join(path, f'{script}.py')) as f:
+        script_path = os.path.abspath(os.path.join(path, f'{script}.py'))
+        with open(script_path) as f:
             source = f.read()
-        exec(source, variables, variables)
+        try:
+            exec(source, variables, variables)
+        except:
+            _, _, tb = sys.exc_info()
+            for name, value in variables.items():
+                display = str(value).split("\\n")[0]
+                print(f'{name}={display}')
+            if tb and tb.tb_next:
+                print(f'> {script_path}:{tb.tb_next.tb_lineno}')
+                print(source.split('\n')[tb.tb_next.tb_lineno - 1])
+            else:
+                print(f'> {script_path}:?')
+                print(source)
+            raise
     return variables
 
 

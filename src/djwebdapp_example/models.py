@@ -79,7 +79,7 @@ class Mint(models.Model):
         blank=True,
     )
     address = models.ForeignKey(
-        'djwebdapp.Address',
+        'djwebdapp.Account',
         on_delete=models.CASCADE,
     )
     value = models.PositiveIntegerField()
@@ -97,7 +97,7 @@ class Balance(models.Model):
         on_delete=models.CASCADE,
     )
     address = models.ForeignKey(
-        'djwebdapp.Address',
+        'djwebdapp.Account',
         on_delete=models.CASCADE,
         related_name='fa12_balance_set',
     )

@@ -1,8 +1,11 @@
 djWebdApp Tezos
 ~~~~~~~~~~~~~~~
 
+Indexing contracts
+==================
+
 Example contract
-================
+----------------
 
 We will need to instanciate a contract on this blockchain. We'll use a simple
 example that looks like some FA12, in Pure Python (rather than "Smart" Python),
@@ -22,7 +25,7 @@ following command:
    pymich FA12.py FA12.json
 
 Local tezos blockchain
-======================
+----------------------
 
 .. danger:: Before you begin, make sure you have followed the setup
             instructions from :ref:`Local blockchains`.
@@ -58,7 +61,7 @@ Check your client balance:
     {'balance': '3997440000000', 'delegate': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx', 'counter': '0'}
 
 Deploy a smart contract
-=======================
+-----------------------
 
 Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting the
 following in our pytezos python shell started above, which you need to start if
@@ -72,7 +75,7 @@ it or leave the shell open because you need it to index the contract in the
 next section.
 
 Setting up a blockchain network
-===============================
+-------------------------------
 
 Now that we have deployed a contract, let's setup ``djwebdapp`` for a local
 ethereum node, also programatically in ``./manage.py shell``:
@@ -81,7 +84,7 @@ ethereum node, also programatically in ``./manage.py shell``:
   :language: Python
 
 Indexing a contract
-===================
+-------------------
 
 Now that we have deployed a contract, and setup ``djwebdapp`` for a local tezos
 node, let's index a contract, also programatically in ``./manage.py shell``:
@@ -90,7 +93,7 @@ node, let's index a contract, also programatically in ``./manage.py shell``:
   :language: Python
 
 Normalizing incomming data: Models
-==================================
+----------------------------------
 
 We have created example models in the ``src/djwebdapp_example`` directory:
 
@@ -108,7 +111,7 @@ And declared a function to update the balance of an FA12 contract:
   :language: Python
 
 Normalizing incomming data: Signals
-===================================
+-----------------------------------
 
 Finally, to connect the dots, we are first going to connect a custom callback
 to ``djwebdapp_tezos.models.TezosTransaction``'s ``post_save`` signal to create
@@ -119,5 +122,49 @@ normalized ``Mint`` objects for every ``mint()`` call we index:
 
 We are now ready to normalize the smart contract we have indexed:
 
-.. literalinclude:: ../src/djwebdapp_example/ethereum/normalize.py
+.. literalinclude:: ../src/djwebdapp_example/tezos/normalize.py
+  :language: Python
+
+Vault
+=====
+
+Setup
+-----
+
+Make sure you have installed djwebdapp with the ``[vault]`` dependencies (or
+``[all]``).
+
+.. note:: You may rotate Fernet keys used for encryption, please refer to
+          `djfernet
+          <https://djfernet.readthedocs.io/en/latest/#keys>`_
+          documentation.
+
+Importing a wallet
+------------------
+
+.. literalinclude:: ../src/djwebdapp_example/tezos/wallet_import.py
+  :language: Python
+
+Creating a wallet
+-----------------
+
+.. literalinclude:: ../src/djwebdapp_example/wallet_create.py
+  :language: Python
+
+Transfering coins
+-----------------
+
+.. literalinclude:: ../src/djwebdapp_example/transfer.py
+  :language: Python
+
+Refreshing balances
+-------------------
+
+.. literalinclude:: ../src/djwebdapp_example/balance.py
+  :language: Python
+
+Deploy a smart contract
+-----------------------
+
+.. literalinclude:: ../src/djwebdapp_example/tezos/deploy_contract.py
   :language: Python

@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 
 extras_require = dict(
     vault=[
-        'djfernet>=0.7.2',
         'mnemonic',
     ],
     ethereum=[
@@ -44,7 +43,7 @@ setup(
     package_dir={'': 'src'},
     install_requires=[
         'django-model-utils',
-        'tenacity',
+        'djfernet>=0.8.1',
     ],
     extras_require=extras_require,
     author='James Pic',

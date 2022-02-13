@@ -2,7 +2,7 @@ import time
 from asgiref.sync import async_to_sync, sync_to_async
 from dipdup.datasources.tzkt.datasource import TzktDatasource
 from django.core.management.base import BaseCommand
-from djwebdapp.models import Address
+from djwebdapp.models import Account
 from djwebdapp_tezos.models import TezosTransaction
 from djwebdapp.signals import contract_indexed
 
@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 hash=result.hash,
                 blockchain=contract.blockchain,
                 defaults=dict(
-                    sender=Address.objects.get_or_create(
+                    sender=Account.objects.get_or_create(
                         address=result.sender_address,
                         blockchain=contract.blockchain,
                     )[0],

@@ -3,7 +3,7 @@ from django.db.models import Q, Sum
 
 def balance_update(fa12, address):
     """
-    Address balance calculator.
+    Account balance calculator.
 
     We completely recalculate the balance here so that we are able to keep
     correct results even after a blockchain reorg.

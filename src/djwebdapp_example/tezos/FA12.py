@@ -1,15 +1,15 @@
 from dataclasses import dataclass
-from pymich.michelson_types import Address, BigMap, Contract, Nat
+from pymich.michelson_types import Account, BigMap, Contract, Nat
 from pymich.stdlib import SENDER
 
 
 @dataclass
 class FA12(Contract):
-    tokens: BigMap[Address, Nat]
+    tokens: BigMap[Account, Nat]
     total_supply: Nat
-    owner: Address
+    owner: Account
 
-    def mint(self, _to: Address, value: Nat):
+    def mint(self, _to: Account, value: Nat):
         if SENDER != self.owner:
             raise Exception("Only owner can mint")
 

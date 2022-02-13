@@ -8,7 +8,7 @@ from djwebdapp_tezos.models import TezosTransaction
 def test_index(include):
     variables = include(
         'djwebdapp_example/tezos',
-        'client', 'deploy', 'blockchain', 'index',
+        'client', 'load', 'deploy', 'blockchain', 'index',
     )
     contract = variables['contract']
 
@@ -28,7 +28,7 @@ def test_index(include):
 def test_tzkt(include):
     variables = include(
         'djwebdapp_example/tezos',
-        'client', 'deploy', 'blockchain',
+        'client', 'load', 'deploy', 'blockchain',
     )
 
     contract, _ = TezosTransaction.objects.get_or_create(
@@ -47,3 +47,31 @@ def test_tzkt(include):
     assert call.function == 'mint'
     assert call.args['_to'] == 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'
     assert call.args['value'] == '1000'
+
+
+@pytest.mark.django_db
+def test_transfer(include):
+    include(
+        'djwebdapp_example/tezos',
+        'client',
+        'blockchain',
+        'wallet_import',
+        '../wallet_create',
+        '../transfer',
+        '../wait',
+        '../balance',
+    )
+
+
+@pytest.mark.django_db
+def test_spool(include):
+    include(
+        'djwebdapp_example/tezos',
+        'client',
+        'blockchain',
+        'wallet_import',
+        '../wallet_create',
+        '../transfer',
+        'load',
+        'deploy_contract',
+    )

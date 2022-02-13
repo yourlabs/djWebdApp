@@ -6,7 +6,7 @@ EXPOSE 8000
 
 RUN pacman -Syu --noconfirm vim libsodium libsecp256k1 && rm -rf /var/cache/pacman/pkg
 RUN useradd --home-dir /app --uid 1000 app && mkdir -p /app && chown -R app /app
-RUN pip install djcli wheel
+RUN pip install wheel
 WORKDIR /app
 
 COPY setup.py README.rst /app/

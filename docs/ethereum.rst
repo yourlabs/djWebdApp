@@ -1,8 +1,11 @@
 djWebdApp Ethereum
 ~~~~~~~~~~~~~~~~~~
 
+Indexing contracts
+==================
+
 Example contract
-================
+----------------
 
 We will need to instanciate a contract on this blockchain. We'll use a simple
 example smart contract in solidity that looks like some FA12:
@@ -19,7 +22,7 @@ following command:
     solc --abi --overwrite --output-dir . --bin FA12.sol
 
 Example contract deployment
-===========================
+---------------------------
 
 .. danger:: Before you begin, make sure you have followed the setup
             instructions from :ref:`Local blockchains`.
@@ -55,7 +58,7 @@ Check your client balance:
     115792089237316195423570985008687907853269984665640564039457577993160770347781
 
 Deploy a smart contract
-=======================
+-----------------------
 
 Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting the
 following in our python shell started above, which you need to start if
@@ -69,7 +72,7 @@ it or leave the shell open because you need it to index the contract in the
 next section.
 
 Setting up a blockchain network
-===============================
+-------------------------------
 
 Now that we have deployed a contract, let's setup ``djwebdapp`` for a local
 ethereum node, also programatically in ``./manage.py shell``:
@@ -78,7 +81,7 @@ ethereum node, also programatically in ``./manage.py shell``:
   :language: Python
 
 Indexing a contract
-===================
+-------------------
 
 Now that we have setup ``djwebdapp`` for a local ethereum node, let's index a
 contract, also programatically in ``./manage.py shell``:
@@ -87,7 +90,7 @@ contract, also programatically in ``./manage.py shell``:
   :language: Python
 
 Normalizing incomming data: Models
-==================================
+----------------------------------
 
 We have created example models in the ``src/djwebdapp_example`` directory:
 
@@ -105,7 +108,7 @@ And declared a function to update the balance of an FA12 contract:
   :language: Python
 
 Normalizing incomming data: Signals
-===================================
+-----------------------------------
 
 Finally, to connect the dots, we are first going to connect a custom callback
 to ``djwebdapp_ethereum.models.EthereumTransaction``'s ``post_save`` signal to
@@ -117,4 +120,48 @@ create normalized ``Mint`` objects for every ``mint()`` call we index:
 We are now ready to normalize the smart contract we have indexed:
 
 .. literalinclude:: ../src/djwebdapp_example/ethereum/normalize.py
+  :language: Python
+
+Vault
+=====
+
+Setup
+-----
+
+Make sure you have installed djwebdapp with the ``[vault]`` dependencies (or
+``[all]``).
+
+.. note:: You may rotate Fernet keys used for encryption, please refer to
+          `djfernet
+          <https://djfernet.readthedocs.io/en/latest/#keys>`_
+          documentation.
+
+Importing a wallet
+------------------
+
+.. literalinclude:: ../src/djwebdapp_example/ethereum/wallet_import.py
+  :language: Python
+
+Creating a wallet
+-----------------
+
+.. literalinclude:: ../src/djwebdapp_example/wallet_create.py
+  :language: Python
+
+Transfering coins
+-----------------
+
+.. literalinclude:: ../src/djwebdapp_example/transfer.py
+  :language: Python
+
+Refreshing balances
+-------------------
+
+.. literalinclude:: ../src/djwebdapp_example/balance.py
+  :language: Python
+
+Deploy a contract
+-----------------
+
+.. literalinclude:: ../src/djwebdapp_example/ethereum/deploy_contract.py
   :language: Python

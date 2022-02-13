@@ -23,3 +23,13 @@ class EthereumTransaction(Transaction):
         null=True,
         help_text='Input hex string if any',
     )
+    bytecode = models.TextField(
+        blank=True,
+        null=True,
+        help_text='Contract bytecode if this is a smart contract to deploy',
+    )
+
+    def save(self, *args, **kwargs):
+        if self.bytecode:
+            self.has_code = True
+        return super().save(*args, **kwargs)

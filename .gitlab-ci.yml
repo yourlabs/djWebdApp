@@ -10,7 +10,7 @@ build:
 
 qa:
   stage: test
-  script: flake8 --exclude migrations,tezos,ethereum src djwebdapp_demo
+  script: flake8 --exclude migrations,djwebdapp_example src djwebdapp_demo
 
 docs:
   stage: test
@@ -36,7 +36,7 @@ docs:
 # the inside.
 test:
   stage: test
-  script: py.test -sv --cov --cov-report xml --cov-report term-missing src
+  script: py.test -sv --cov=/app/src  --cov-report xml --cov-report term-missing tests
   image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
     #image: djwebdapp
 

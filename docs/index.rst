@@ -6,13 +6,11 @@
 .. include:: ../README.rst
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    tezos
    ethereum
-   vault
-
 
 Indices and tables
 ==================

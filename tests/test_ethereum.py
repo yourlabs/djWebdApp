@@ -12,7 +12,7 @@ def test_index(include):
     """
     variables = include(
         'djwebdapp_example/ethereum',
-        'client', 'deploy', 'blockchain', 'index',
+        'client', 'load', 'deploy', 'blockchain', 'index',
     )
 
     contract = EthereumTransaction.objects.get(address=variables['address'])
@@ -29,3 +29,31 @@ def test_index(include):
 
     contract.blockchain.provider.index()
     assert contract.call_set.count() == 2
+
+
+@pytest.mark.django_db
+def test_transfer(include):
+    include(
+        'djwebdapp_example/tezos',
+        'client',
+        'blockchain',
+        'wallet_import',
+        '../wallet_create',
+        '../transfer',
+        '../deploy',
+        '../balance',
+    )
+
+
+@pytest.mark.django_db
+def test_spool(include):
+    include(
+        'djwebdapp_example/ethereum',
+        'client',
+        'blockchain',
+        'wallet_import',
+        '../wallet_create',
+        '../transfer',
+        'load',
+        'deploy_contract',
+    )
