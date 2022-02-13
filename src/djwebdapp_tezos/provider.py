@@ -166,7 +166,6 @@ class TezosProvider(Provider):
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
-        print(f'WROTE {self.head}')
 
         self.logger.info(
             f'{transaction}.deploy({transaction.args}): success!')
