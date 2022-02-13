@@ -26,5 +26,9 @@ mint = EthereumTransaction.objects.create(
 # Spool will first deploy the contract
 assert blockchain.provider.spool() == contract
 
+# Geth --dev incremented the block level transactionnaly, no need to wait here,
+# you would have to wait for the next block with a real network as such:
+# blockchain.wait(1)
+
 # Now spool will deploy the mint call!
 assert blockchain.provider.spool() == mint
