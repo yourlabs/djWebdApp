@@ -168,9 +168,8 @@ class Blockchain(models.Model):
     def provider(self):
         return self.provider_cls(blockchain=self)
 
-    def wait(self, blocks):
-        wait_level = self.provider.head + blocks
-        while self.provider.head < wait_level:
+    def wait(self, level):
+        while self.provider.head < level:
             time.sleep(.1)
 
 
@@ -400,13 +399,6 @@ class Transaction(models.Model):
             int(datetime.datetime.now().strftime('%s')),
         ])
         self.save()
-        self.blockchain.provider.logger.info(
-            f'{self}.state_set({state})'
-        )
-        # ensure commit happens, is it really necessary ?
-        # not sure why not
-        # django.db.connection.close()
-        # close_old_connections()
 
     @property
     def provider(self):
@@ -438,7 +430,7 @@ class Transaction(models.Model):
                 self.state_set('aborted')
             else:
                 self.state_set('retrying')
-            return False
+            raise
         else:
             self.last_fail = None
             self.error = ''
@@ -450,7 +442,6 @@ class Transaction(models.Model):
                 sender=type(self),
                 instance=self,
             )
-            return True
 
     def save(self, *args, **kwargs):
         if not self.kind:

@@ -76,11 +76,12 @@ class TezosProvider(Provider):
         )
         contract.level = level
         contract.address = address
-        contract.hash = hash
+        contract.hash = op['hash']
         contract.gas = content['fee']
         contract.metadata = content
         contract.sender, _ = self.blockchain.account_set.get_or_create(
-            address=op['contents'][0]['source']
+            address=op['contents'][0]['source'],
+            blockchain=self.blockchain,
         )
         contract_indexed.send(
             sender=type(contract),

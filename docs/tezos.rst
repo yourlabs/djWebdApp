@@ -63,6 +63,11 @@ Check your client balance:
 Deploy a smart contract
 -----------------------
 
+First, load the smart contract source code:
+
+.. literalinclude:: ../src/djwebdapp_example/tezos/load.py
+  :language: Python
+
 Let's deploy our smart contract and call the ``mint()`` entrypoint by pasting the
 following in our pytezos python shell started above, which you need to start if
 you haven't already to run the following commands:
