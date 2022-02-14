@@ -50,13 +50,13 @@ class Mint(models.Model):
     """
     Model representing a mint() call on an FA12 contract.
 
-    .. py:attribute:: name
+    .. py:attribute:: address
 
-        The name of the FA12 token, ie.: "Your New Token"
+        Recipient address for the mint.
 
-    .. py:attribute:: symbol
+    .. py:attribute:: value
 
-        Symbol of the FA12 token, ie.: "YNT"
+        Amount of tokens minted.
 
     .. note:: You wouldn't need to have relations to contract calls on every
               blockchain, but we have them here so that we are later able to
