@@ -33,15 +33,10 @@ class EthereumProvider(Provider):
     def get_balance(self, address=None):
         weis = self.client.eth.getBalance(
             address
+            or getattr(self.wallet, 'address', False)
             or self.client.eth.default_account
         )
         return self.client.fromWei(weis, 'ether')
-
-    def transfer(self, receiver, amount, min_confirmations=None):
-        self.client.eth.send_raw_transaction(dict(
-            to=receiver,
-            value=self.client.toWei(amount, 'ether'),
-        ))
 
     @property
     def head(self):
@@ -106,8 +101,6 @@ class EthereumProvider(Provider):
         }
 
     def send(self, transaction):
-        self.logger.debug(f'{transaction} deploy: start')
-
         Contract = self.client.eth.contract(  # noqa
             abi=transaction.contract.abi,
             address=transaction.contract.address,
@@ -127,19 +120,20 @@ class EthereumProvider(Provider):
                 args[i] = self.client.toBytes(hexstr=args[i])
 
         tx = func(*args)
-
-        result = self.write_transaction(transaction.sender, tx)
-
-        self.logger.info(f'{transaction}: success')
-        return result
+        self.write_transaction(transaction.sender, tx)
 
     def deploy(self, transaction):
-        transaction.sender.last_level = self.head
+        self.logger.debug(f'{transaction}.deploy(): start')
+        transaction.level = self.head
 
         if transaction.kind == 'contract':
+            transaction.sender.last_level = self.head
             self.originate(transaction)
+            transaction.sender.save()
         elif transaction.kind == 'function':
+            transaction.sender.last_level = self.head
             self.send(transaction)
+            transaction.sender.save()
         elif transaction.kind == 'transfer':
             self.transfer(transaction)
         else:
@@ -147,26 +141,39 @@ class EthereumProvider(Provider):
             transaction.state_set('failed')
             return
 
-        transaction.sender.save()
+        transaction.state_set('done')
+        self.logger.info(f'{transaction}.deploy(): success')
+
+    def transfer(self, transaction):
+        tx = {
+            'to': transaction.receiver.address,
+            'from': transaction.sender.address,
+            'value': self.client.toWei(transaction.amount, 'ether'),
+        }
+        tx['gas'] = self.client.eth.estimateGas(tx)
+        tx['gasPrice'] = self.client.eth.gas_price
+        tx['nonce'] = self.client.eth.getTransactionCount(
+            transaction.sender.address
+        )
+        signed_txn = self.client.eth.account.sign_transaction(
+            tx,
+            private_key=transaction.sender.secret_key,
+        )
+        return self.client.toHex(
+            self.client.keccak(signed_txn.rawTransaction)
+        )
 
     def originate(self, transaction):
-        self.logger.debug(f'{transaction}.deploy({transaction.args}): start')
-
         Contract = self.client.eth.contract(  # noqa
             abi=transaction.abi,
             bytecode=transaction.bytecode,
         )
 
         tx = Contract.constructor(*transaction.args)
-        transaction.hash = self.write_transaction(
-            transaction.sender,
-            tx,
-        )
+        transaction.hash = self.write_transaction(transaction.sender, tx)
         receipt = self.client.eth.wait_for_transaction_receipt(
             transaction.hash)
         transaction.address = receipt.contractAddress
-        transaction.save()
-        self.logger.info(f'{transaction}.deploy({transaction.args}): success')
 
     def write_transaction(self, sender, tx):
         nonce = self.client.eth.getTransactionCount(sender.address)
@@ -183,7 +190,7 @@ class EthereumProvider(Provider):
             private_key=sender.secret_key,
         )
 
-        self.client.eth.sendRawTransaction(signed_txn.rawTransaction)
+        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
         return self.client.toHex(
             self.client.keccak(signed_txn.rawTransaction)
         )
