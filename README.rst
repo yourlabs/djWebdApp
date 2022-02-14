@@ -26,8 +26,13 @@ project like any other Django App, in which you can add models, endpoints, and
 have an admin interface for free, and so on, benefiting from the `vast Django
 ecosystem of apps <https://djangopackages.org/>`_.
 
-Check out the `djWebdApp Tezos demo video on YouTube
-<https://www.youtube.com/watch?v=quSX-gJ6eow>`_!
+Video demos
+===========
+
+- `Tezos tutorial demo
+<https://www.youtube.com/watch?v=quSX-gJ6eow>`_
+- `Ethereum tutorial demo
+<https://www.youtube.com/watch?v=oTjvnjB_8Tc>`_
 
 Getting started
 ===============
