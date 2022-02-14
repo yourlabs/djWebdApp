@@ -52,9 +52,9 @@ Check your client balance:
 
 .. code-block:: python
 
-    >>> w3.eth.default_account
+    >>> client.eth.default_account
     '0xD1562e5128FC95311E46129a9f445402278e7751'
-    >>> w3.eth.get_balance(w3.eth.default_account)
+    >>> client.eth.get_balance(w3.eth.default_account)
     115792089237316195423570985008687907853269984665640564039457577993160770347781
 
 Deploy a smart contract
