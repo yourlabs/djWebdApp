@@ -30,9 +30,9 @@ Video demos
 ===========
 
 - `Tezos tutorial demo
-<https://www.youtube.com/watch?v=quSX-gJ6eow>`_
+  <https://www.youtube.com/watch?v=quSX-gJ6eow>`_
 - `Ethereum tutorial demo
-<https://www.youtube.com/watch?v=oTjvnjB_8Tc>`_
+  <https://www.youtube.com/watch?v=oTjvnjB_8Tc>`_
 
 Getting started
 ===============
