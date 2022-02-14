@@ -11,6 +11,7 @@
 
    tezos
    ethereum
+   examples
 
 Indices and tables
 ==================
