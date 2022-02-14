@@ -16,15 +16,18 @@ the blockchain, with the following features usable independently:
 * private key vault
 * blockchain writer
 * blockchain data normalization
-* metamask authentication backend
 * multiple blockchain support (tezos & ethereum so far)
 * inter-blockchain contract synchronisation
+* metamask authentication backend (TBA)
 
 In addition to these features, djWebdApp differenciates itself from indexers
 like dipdup because it is extensible: it's just a module you add to your Django
 project like any other Django App, in which you can add models, endpoints, and
 have an admin interface for free, and so on, benefiting from the `vast Django
 ecosystem of apps <https://djangopackages.org/>`_.
+
+Check out the `djWebdApp Tezos demo video on YouTube
+<https://www.youtube.com/watch?v=quSX-gJ6eow>`_!
 
 Getting started
 ===============
