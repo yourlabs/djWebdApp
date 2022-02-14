@@ -75,3 +75,21 @@ def test_spool(include):
         'load',
         'deploy_contract',
     )
+
+
+@pytest.mark.django_db
+def test_docs(include):
+    include(
+        'djwebdapp_example/tezos',
+        'client',
+        'load',
+        'deploy',
+        'blockchain',
+        'index',
+        'normalize',
+        'wallet_import',
+        '../wallet_create',
+        '../transfer',
+        '../balance',
+        'deploy_contract',
+    )

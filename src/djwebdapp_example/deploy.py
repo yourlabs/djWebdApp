@@ -1,2 +1,4 @@
-# You may instead run ./manage.py spool
-assert transaction.deploy(), transaction.error
+# You may instead run ./manage.py spool, or blockchain.provider.spool()
+transaction.deploy()
+
+assert transaction.hash
