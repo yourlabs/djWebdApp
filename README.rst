@@ -44,7 +44,8 @@ Install
 
 To install djwebdapp with all optional dependencies::
 
-    pip install djwebdapp[all][binary]
+    # Use --use-deprecated legacy-resolver untill dipdup upgrades dependencies
+    pip install --use-deprecated legacy-resolver djwebdapp[all][binary]
 
 Don't use ``[binary]`` right there if you prefer to install compiled python
 packages from your system package manager.
