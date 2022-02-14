@@ -159,7 +159,7 @@ Creating a wallet
 Transfering coins
 -----------------
 
-.. literalinclude:: ../src/djwebdapp_example/transfer.py
+.. literalinclude:: ../src/djwebdapp_example/tezos/transfer.py
   :language: Python
 
 Refreshing balances

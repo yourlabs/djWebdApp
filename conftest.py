@@ -36,7 +36,7 @@ def evil(path, *scripts, variables=None):
         except:
             _, _, tb = sys.exc_info()
             for name, value in variables.items():
-                display = str(value).split("\\n")[0]
+                display = str(value).split('\n')[0]
                 print(f'{name}={display}')
             if tb and tb.tb_next:
                 print(f'> {script_path}:{tb.tb_next.tb_lineno}')

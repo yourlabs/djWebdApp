@@ -39,7 +39,7 @@ def test_transfer(include):
         'blockchain',
         'wallet_import',
         '../wallet_create',
-        '../transfer',
+        'transfer',
         '../deploy',
         '../balance',
     )
@@ -53,7 +53,7 @@ def test_spool(include):
         'blockchain',
         'wallet_import',
         '../wallet_create',
-        '../transfer',
+        'transfer',
         'load',
         'deploy_contract',
     )
@@ -71,7 +71,7 @@ def test_docs(include):
         'normalize',
         'wallet_import',
         '../wallet_create',
-        '../transfer',
+        'transfer',
         '../balance',
         'deploy_contract',
     )
