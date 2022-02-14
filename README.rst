@@ -58,10 +58,8 @@ Demo project
 For this tutorial, we'll use the ``djwebdapp_demo`` project:
 
 * clone this project and go into the repository clone directory
-* run ``pip install -e .[all]``
+* run ``pip install -e .[all][binary]``
 * run ``./manage.py migrate``
-* run ``./manage.py createsuperuser``
-* run ``./manage.py runserver`` to start a server on http://localhost:8000/admin
 * run ``./manage.py shell`` to run Python commands
 
 .. _Local blockchains:
