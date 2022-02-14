@@ -135,13 +135,12 @@ class EthereumProvider(Provider):
             self.send(transaction)
             transaction.sender.save()
         elif transaction.kind == 'transfer':
-            self.transfer(transaction)
+            transaction.hash = self.transfer(transaction)
         else:
             transaction.error = f'Unknown transaction kind {transaction.kind}'
             transaction.state_set('failed')
             return
 
-        transaction.state_set('done')
         self.logger.info(f'{transaction}.deploy(): success')
 
     def transfer(self, transaction):
@@ -155,10 +154,12 @@ class EthereumProvider(Provider):
         tx['nonce'] = self.client.eth.getTransactionCount(
             transaction.sender.address
         )
+        tx['chainId'] = self.client.eth.chain_id
         signed_txn = self.client.eth.account.sign_transaction(
             tx,
             private_key=transaction.sender.secret_key,
         )
+        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
         return self.client.toHex(
             self.client.keccak(signed_txn.rawTransaction)
         )

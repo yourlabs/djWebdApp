@@ -10,3 +10,6 @@ transaction = Transaction.objects.create(
 
 # Deploy the transaction now
 transaction.deploy()
+
+# Wait one block level
+transaction.blockchain.wait(transaction.level + 1)
