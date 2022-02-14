@@ -163,12 +163,12 @@ class TezosProvider(Provider):
             f'{transaction}.deploy({transaction.args}): success!')
 
     def write_transaction(self, tx, transaction):
+        transaction.level = self.head
         origination = tx.inject(
             _async=False,
         )
         transaction.gas = origination['contents'][0]['fee']
         transaction.hash = origination['hash']
-        transaction.level = self.head
         transaction.save()
 
     def send(self, transaction):
