@@ -85,7 +85,7 @@ class Mint(models.Model):
     value = models.PositiveIntegerField()
 
     def __str__(self):
-        return f'mint({self.user}, {self.value})'
+        return f'mint({self.address.address}, {self.value})'
 
 
 class Balance(models.Model):
