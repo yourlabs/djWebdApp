@@ -34,13 +34,13 @@ def test_index(include):
 @pytest.mark.django_db
 def test_transfer(include):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example/ethereum',
         'client',
         'blockchain',
         'wallet_import',
         '../wallet_create',
         'transfer',
-        '../deploy',
+        '../wait',
         '../balance',
     )
 
@@ -62,7 +62,7 @@ def test_spool(include):
 @pytest.mark.django_db
 def test_docs(include):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example/ethereum',
         'client',
         'load',
         'deploy',
