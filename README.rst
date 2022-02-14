@@ -57,10 +57,13 @@ Demo project
 
 For this tutorial, we'll use the ``djwebdapp_demo`` project:
 
-* clone this project and go into the repository clone directory
-* run ``pip install -e .[all][binary]``
-* run ``./manage.py migrate``
-* run ``./manage.py shell`` to run Python commands
+.. code-block:: bash
+
+    git clone https://yourlabs.io/oss/djwebdapp.git
+    cd djwebdapp
+    pip install --use-deprecated legacy-resolver --editable .[all][binary]
+    ./manage.py migrate
+    ./manage.py shell
 
 .. _Local blockchains:
 
