@@ -13,8 +13,6 @@ from django.utils.translation import gettext_lazy as _
 from fernet_fields import EncryptedBinaryField
 from model_utils.managers import InheritanceManager
 
-from .signals import contract_deployed
-
 
 SETTINGS = dict(
     PROVIDERS=(
@@ -438,10 +436,6 @@ class Transaction(models.Model):
                 self.state_set('watching')
             else:
                 self.state_set('done')
-            contract_deployed.send(
-                sender=type(self),
-                instance=self,
-            )
 
     def save(self, *args, **kwargs):
         if not self.kind:

@@ -8,7 +8,6 @@ from django.conf import settings
 from djwebdapp.models import Account
 from djwebdapp_ethereum.models import EthereumTransaction
 from djwebdapp.provider import Provider
-from djwebdapp.signals import call_indexed, contract_indexed
 
 
 class EthereumProvider(Provider):
@@ -67,10 +66,6 @@ class EthereumProvider(Provider):
         contract.level = level
         contract.gas = transaction['gas']
         contract.metadata = self.json(transaction)
-        contract_indexed.send(
-            sender=self.transaction_class,
-            instance=contract,
-        )
         contract.state_set('done')
 
     def index_call(self, level, transaction):
@@ -102,10 +97,6 @@ class EthereumProvider(Provider):
         fn, args = interface.decode_function_input(call.metadata['input'])
         call.function = fn.fn_name
         call.args = args
-        call_indexed.send(
-            sender=self.transaction_class,
-            instance=call,
-        )
         call.state_set('done')
 
     def json(self, transaction):

@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from djwebdapp.exceptions import PermanentError
 from djwebdapp.models import Account
 from djwebdapp.provider import Provider
-from djwebdapp.signals import call_indexed, contract_indexed
 
 from djwebdapp_tezos.models import TezosTransaction
 
@@ -83,10 +82,6 @@ class TezosProvider(Provider):
             address=op['contents'][0]['source'],
             blockchain=self.blockchain,
         )
-        contract_indexed.send(
-            sender=type(contract),
-            instance=contract,
-        )
         contract.state_set('done')
 
     def index_call(self, level, op, content):
@@ -116,10 +111,6 @@ class TezosProvider(Provider):
         method = getattr(contract.interface, call.function)
         args = method.decode(call.metadata['parameters']['value'])
         call.args = args[call.function]
-        call_indexed.send(
-            sender=type(call),
-            instance=call,
-        )
         call.state_set('done')
 
     def transfer(self, transaction):
