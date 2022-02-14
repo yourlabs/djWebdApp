@@ -4,7 +4,6 @@ from dipdup.datasources.tzkt.datasource import TzktDatasource
 from django.core.management.base import BaseCommand
 from djwebdapp.models import Account
 from djwebdapp_tezos.models import TezosTransaction
-from djwebdapp.signals import contract_indexed
 
 
 class Command(BaseCommand):
@@ -54,16 +53,11 @@ class Command(BaseCommand):
             while _tries:
                 result = self.sync_contract(contract, tzkt)
 
-                if not result:
+                if result:
+                    break
+                else:
                     _tries -= 1
                     time.sleep(.1)
-                    continue
-                else:
-                    contract_indexed.send(
-                        sender=type(contract),
-                        instance=contract,
-                    )
-                    break
 
     @async_to_sync
     async def sync_contract(self, contract, tzkt):
