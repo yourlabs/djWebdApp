@@ -70,11 +70,11 @@ class EthereumProvider(Provider):
             address=transaction['to'],
         )
         call = contract.call_set.select_subclasses().filter(
-            hash=transaction['hash'],
+            hash=transaction['hash'].hex(),
         ).first()
         if not call:
             call = EthereumTransaction(
-                hash=transaction['hash'],
+                hash=transaction['hash'].hex(),
                 contract=contract,
                 blockchain=self.blockchain,
             )
