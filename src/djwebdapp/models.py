@@ -250,11 +250,6 @@ class Transaction(models.Model):
         'Blockchain',
         on_delete=models.CASCADE,
     )
-    datetime = models.DateTimeField(
-        null=True,
-        blank=True,
-        auto_now=True,
-    )
     hash = models.CharField(
         unique=True,
         max_length=255,
@@ -329,7 +324,6 @@ class Transaction(models.Model):
         db_index=True,
         help_text='Contract address, appliable to method calls',
     )
-    contract_address = models.CharField(max_length=255, null=True, blank=True)
     # This relation is actually in blockchain specific subclasses.
     # contract = models.ForeignKey(
     #     'self',
@@ -445,9 +439,6 @@ class Transaction(models.Model):
                 self.kind = 'function'
             elif self.amount:
                 self.kind = 'transfer'
-
-        if not self.contract_address and getattr(self, 'contract_id', ''):
-            self.contract_address = self.contract.contract_address
 
         if not self.blockchain_id and self.sender_id:
             self.blockchain_id = self.sender.blockchain_id

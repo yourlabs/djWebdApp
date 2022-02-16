@@ -127,8 +127,8 @@ class Provider:
             sender__blockchain__is_active=True,
             has_code=True,
         ).filter(
-            Q(contract_address='')
-            | Q(contract_address=None)
+            Q(address='')
+            | Q(address=None)
         ).filter(
             Q(sender__last_level__lt=self.head)
             | Q(sender__last_level=None)
