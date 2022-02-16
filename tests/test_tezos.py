@@ -25,31 +25,6 @@ def test_index(include):
 
 
 @pytest.mark.django_db
-def test_tzkt(include):
-    variables = include(
-        'djwebdapp_example/tezos',
-        'client', 'load', 'deploy', 'blockchain',
-    )
-
-    contract, _ = TezosTransaction.objects.get_or_create(
-        blockchain=variables['blockchain'],
-        address=variables['address'],
-    )
-
-    management.call_command(
-        'tzkt_index_contracts',
-        tzkt='http://tzkt-api:5000'
-    )
-
-    call = contract.call_set.first()
-
-    assert call
-    assert call.function == 'mint'
-    assert call.args['_to'] == 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'
-    assert call.args['value'] == '1000'
-
-
-@pytest.mark.django_db
 def test_transfer(include):
     include(
         'djwebdapp_example/tezos',

@@ -38,15 +38,8 @@ test:
   stage: test
   script: py.test -sv --cov=/app/src  --cov-report xml --cov-report term-missing tests
   image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
-    #image: djwebdapp
 
   variables:
-    POSTGRES_USER: tzkt
-    POSTGRES_PASSWORD: qwerty
-    POSTGRES_DB: tzkt_db
-    TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://tzkt-api:5000
-    TezosNode__Endpoint: http://tzlocal:8732
-    ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
     FF_NETWORK_PER_BUILD: "1"
 
   artifacts:
@@ -54,12 +47,6 @@ test:
       cobertura: coverage.xml
 
   services:
-  - alias: tzkt-db
-    name: postgres:13
-  - alias: tzkt-api
-    name: bakingbad/tzkt-api:latest
-  - alias: tzkt-sync
-    name: bakingbad/tzkt-sync:latest
   - alias: tzlocal
     name: yourlabs/tezos
   - alias: ethlocal

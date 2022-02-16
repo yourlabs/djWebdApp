@@ -1,37 +1,6 @@
 version: '3'
 
 services:
-  db:
-    container_name: tzkt-db
-    image: postgres:13
-    environment:
-      POSTGRES_USER: tzkt
-      POSTGRES_PASSWORD: qwerty
-      POSTGRES_DB: tzkt_db
-
-  api:
-    container_name: tzkt-api
-    image: bakingbad/tzkt-api:latest
-    depends_on:
-      - db
-    environment:
-      ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
-      TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://0.0.0.0:5000
-      TezosNode__Endpoint: http://tzlocal:8732
-    expose:
-      - 5000
-    ports:
-      - 0.0.0.0:5000:5000
-
-  sync:
-    container_name: tzkt-sync
-    image: bakingbad/tzkt-sync:latest
-    environment:
-      ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
-      TezosNode__Endpoint: http://tzlocal:8732
-    depends_on:
-      - db
-
   tzlocal:
     container_name: tzlocal
     image: yourlabs/tezos
