@@ -51,3 +51,25 @@ def evil(path, *scripts, variables=None):
 @pytest.fixture
 def include():
     return evil
+
+
+@pytest.fixture
+def admin_smoketest(admin_client):
+    def _():
+        urls = (
+            '/admin/djwebdapp/account/',
+            '/admin/djwebdapp/account/add/',
+            '/admin/djwebdapp/blockchain/',
+            '/admin/djwebdapp/blockchain/add/',
+            '/admin/djwebdapp/node/',
+            '/admin/djwebdapp/node/add/',
+            '/admin/djwebdapp/transaction/',
+            '/admin/djwebdapp/transaction/add/',
+            '/admin/djwebdapp_tezos/tezostransaction/',
+            '/admin/djwebdapp_tezos/tezostransaction/add/',
+            '/admin/djwebdapp_ethereum/ethereumtransaction/',
+            '/admin/djwebdapp_ethereum/ethereumtransaction/add/',
+        )
+        for url in urls:
+            assert admin_client.get(url).status_code == 200
+    return _

@@ -3,6 +3,7 @@ import random
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
+from djwebdapp.signals import get_args
 
 
 class Provider:
@@ -19,6 +20,16 @@ class Provider:
 
     def get_client(self, wallet=None):
         raise NotImplementedError()
+
+    def get_args(self, transaction):
+        results = get_args.send(
+            sender=type(self),
+            transaction=transaction,
+        )
+        for callback, result in results:
+            if result:
+                return result
+        return transaction.args
 
     @property
     def client(self):
@@ -116,8 +127,8 @@ class Provider:
             sender__blockchain__is_active=True,
             has_code=True,
         ).filter(
-            Q(contract_address='')
-            | Q(contract_address=None)
+            Q(address='')
+            | Q(address=None)
         ).filter(
             Q(sender__last_level__lt=self.head)
             | Q(sender__last_level=None)

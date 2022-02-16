@@ -11,9 +11,6 @@ extras_require = dict(
     tezos=[
         'pytezos',
     ],
-    tzkt=[
-        'dipdup',
-    ],
     binary=[
         'pysodium',
         'secp256k1',

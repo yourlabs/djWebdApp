@@ -70,11 +70,11 @@ class EthereumProvider(Provider):
             address=transaction['to'],
         )
         call = contract.call_set.select_subclasses().filter(
-            hash=transaction['hash'],
+            hash=transaction['hash'].hex(),
         ).first()
         if not call:
             call = EthereumTransaction(
-                hash=transaction['hash'],
+                hash=transaction['hash'].hex(),
                 contract=contract,
                 blockchain=self.blockchain,
             )
@@ -113,7 +113,7 @@ class EthereumProvider(Provider):
 
         func = funcs[0]
 
-        args = list(transaction.args)
+        args = self.get_args(transaction)
 
         for i, inp in enumerate(func.abi.get('inputs', [])):
             if inp['type'].startswith('bytes32'):
@@ -170,7 +170,7 @@ class EthereumProvider(Provider):
             bytecode=transaction.bytecode,
         )
 
-        tx = Contract.constructor(*transaction.args)
+        tx = Contract.constructor(*self.get_args(transaction))
         transaction.hash = self.write_transaction(transaction.sender, tx)
         receipt = self.client.eth.wait_for_transaction_receipt(
             transaction.hash)

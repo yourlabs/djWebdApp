@@ -130,6 +130,11 @@ class TezosProvider(Provider):
         return result
 
     def deploy(self, transaction):
+        if not self.client.balance():
+            raise ValidationError(
+                f'{transaction.sender.address} needs more than 0 tezies')
+
+        self.logger.debug(f'{transaction}.deploy(): start')
         if transaction.kind == 'contract':
             self.originate(transaction)
         elif transaction.kind == 'function':
@@ -143,24 +148,15 @@ class TezosProvider(Provider):
 
         transaction.sender.last_level = self.head
         transaction.sender.save()
+        self.logger.info(f'{transaction}.deploy(): success')
 
     def originate(self, transaction):
-        self.logger.debug(
-            f'{transaction}.originate({transaction.args}): start')
-
-        if not self.client.balance():
-            raise ValidationError(
-                f'{transaction.sender.address} needs more than 0 tezies')
-
         tx = self.client.origination(dict(
             code=transaction.micheline,
-            storage=transaction.args,
+            storage=self.get_args(transaction),
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
-
-        self.logger.info(
-            f'{transaction}.deploy({transaction.args}): success!')
 
     def write_transaction(self, tx, transaction):
         transaction.level = self.head
@@ -178,9 +174,7 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            tx = method(*transaction.args)
+            tx = method(*self.get_args(transaction))
         except ValueError as e:
             raise PermanentError(*e.args)
-        result = self.write_transaction(tx, transaction)
-        self.logger.debug(f'{transaction}({transaction.args}): {result}')
-        return result
+        self.write_transaction(tx, transaction)
