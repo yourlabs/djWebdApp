@@ -60,7 +60,7 @@ def test_spool(include):
 
 
 @pytest.mark.django_db
-def test_docs(include):
+def test_docs(include, admin_smoketest):
     include(
         'djwebdapp_example/ethereum',
         'client',
@@ -75,3 +75,4 @@ def test_docs(include):
         '../balance',
         'deploy_contract',
     )
+    admin_smoketest()
