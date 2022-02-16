@@ -14,7 +14,7 @@ assert contract.micheline
 # But calls have not yet been synchronized
 assert not contract.call_set.count()
 
-# Let's index the blockchain
+# Let's index the blockchain, you could also run ./manage.py index
 # in the case of tezos, you could also run ./manage.py tzkt_index_contracts
 blockchain.provider.index()
 
