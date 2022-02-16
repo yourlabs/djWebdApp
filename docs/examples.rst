@@ -1,8 +1,30 @@
 djWebdApp Examples
 ~~~~~~~~~~~~~~~~~~
 
+Signals
+=======
+
+get_args: customizing transaction arguments
+-------------------------------------------
+
+Transaction args are stored in a JSON column: this won't let use leverage all
+python types, such as bytes.
+
+If you want an argument to be provided to the blockchain provider client as
+bytes for example, you can as such:
+
+.. code-block:: python
+
+    from djwebdapp.models import get_args
+    from django.dispatch import receiver
+
+    @receiver(get_args)
+    def bytes_arg(transaction, **kwargs):
+        if transaction.function == 'somefunction':
+            return [bytes(transactions.args[0])]
+
 Chaining blockchain calls
--------------------------
+=========================
 
 This example demonstrates how to generate an initial mint call to deploy
 whenever a new contract is deployed:

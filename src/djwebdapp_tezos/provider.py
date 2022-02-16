@@ -154,7 +154,7 @@ class TezosProvider(Provider):
 
         tx = self.client.origination(dict(
             code=transaction.micheline,
-            storage=transaction.args,
+            storage=self.get_args(transaction),
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
@@ -178,7 +178,7 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            tx = method(*transaction.args)
+            tx = method(*self.get_args(transaction))
         except ValueError as e:
             raise PermanentError(*e.args)
         result = self.write_transaction(tx, transaction)
