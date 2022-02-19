@@ -18,7 +18,7 @@ class TezosProvider(Provider):
     transaction_class = TezosTransaction
 
     def generate_secret_key(self):
-        key = Key.generate()
+        key = Key.generate(export=False)
         return key.public_key_hash(), key.secret_exponent
 
     def get_client(self, **kwargs):
