@@ -13,6 +13,8 @@ from django.utils.translation import gettext_lazy as _
 from fernet_fields import EncryptedBinaryField
 from model_utils.managers import InheritanceManager
 
+from picklefield.fields import PickledObjectField
+
 
 SETTINGS = dict(
     PROVIDERS=(
@@ -311,7 +313,7 @@ class Transaction(models.Model):
         null=True,
         blank=True,
     )
-    args = models.JSONField(
+    args = PickledObjectField(
         default=None,
         null=True,
         blank=True,

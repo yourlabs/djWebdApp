@@ -41,6 +41,7 @@ setup(
     install_requires=[
         'django-model-utils',
         'djfernet>=0.8.1',
+        'django-picklefield>=3.0.1',
     ],
     extras_require=extras_require,
     author='James Pic',
