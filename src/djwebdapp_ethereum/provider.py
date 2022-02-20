@@ -157,7 +157,7 @@ class EthereumProvider(Provider):
         tx['chainId'] = self.client.eth.chain_id
         signed_txn = self.client.eth.account.sign_transaction(
             tx,
-            private_key=transaction.sender.secret_key,
+            private_key=transaction.sender.get_secret_key(),
         )
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
         return self.client.toHex(
@@ -188,7 +188,7 @@ class EthereumProvider(Provider):
         built = tx.buildTransaction(options)
         signed_txn = self.client.eth.account.sign_transaction(
             built,
-            private_key=sender.secret_key,
+            private_key=sender.get_secret_key(),
         )
 
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)

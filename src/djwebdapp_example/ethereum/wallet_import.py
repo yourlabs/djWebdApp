@@ -18,9 +18,10 @@ while not client.eth.getBalance(address):
     time.sleep(.1)
 
 # import the freshly created wallet by secret key
+import binascii
 from djwebdapp.models import Account
 bootstrap = Account.objects.create(
-    secret_key=bytes(private_key),
+    secret_key=binascii.b2a_base64(private_key).decode(),
     address=address,
     blockchain=blockchain,
 )
