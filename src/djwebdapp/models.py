@@ -1,3 +1,4 @@
+import binascii
 import datetime
 import importlib
 import time
@@ -10,7 +11,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from fernet_fields import EncryptedBinaryField
+from fernet_fields import EncryptedTextField
 from model_utils.managers import InheritanceManager
 
 from picklefield.fields import PickledObjectField
@@ -76,7 +77,7 @@ class Account(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
-    secret_key = EncryptedBinaryField()
+    secret_key = EncryptedTextField()
     revealed = models.BooleanField(default=False)
     counter = models.PositiveIntegerField(null=True)
     last_level = models.PositiveIntegerField(null=True)
@@ -98,6 +99,12 @@ class Account(models.Model):
                 self.save()
         return self.balance
 
+    def set_secret_key(self, value):
+        self.secret_key = binascii.b2a_base64(value).decode()
+
+    def get_secret_key(self):
+        return binascii.a2b_base64(self.secret_key)
+
 
 @receiver(signals.pre_save, sender=Account)
 def setup(sender, instance, **kwargs):
@@ -107,8 +114,9 @@ def setup(sender, instance, **kwargs):
             instance.address = instance.provider.get_address()
 
     elif not instance.address and not instance.secret_key:
-        instance.address, instance.secret_key = \
+        instance.address, secret_key = \
             instance.blockchain.provider.generate_secret_key()
+        instance.set_secret_key(secret_key)
 
     if not instance.balance:
         instance.refresh_balance(commit=False)

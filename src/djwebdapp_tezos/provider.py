@@ -23,7 +23,9 @@ class TezosProvider(Provider):
 
     def get_client(self, **kwargs):
         if self.wallet:
-            kwargs['key'] = Key.from_secret_exponent(self.wallet.secret_key)
+            kwargs['key'] = Key.from_secret_exponent(
+                self.wallet.get_secret_key()
+            )
         return pytezos.using(
             shell=self.blockchain.node_set.first().endpoint,
             **kwargs,
