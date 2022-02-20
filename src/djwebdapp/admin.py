@@ -79,9 +79,11 @@ class TransactionAdmin(admin.ModelAdmin):
     )
     list_display = (
         'kind',
+        'function',
         'state',
         'name',
         'hash',
+        'address',
     )
     list_filter = (
         'kind',
