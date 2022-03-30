@@ -35,10 +35,10 @@ def test_index_batch_transaction(include):
 
     contract.blockchain.provider.index()
 
-    mint1_args = TezosTransaction.objects.filter(function="mint", txgroup=0).last().args
+    mint1_args = TezosTransaction.objects.filter(function="mint", txgroup=0).first().args
     assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 11} == mint1_args
 
-    mint2_args = TezosTransaction.objects.filter(function="mint", txgroup=1).first().args
+    mint2_args = TezosTransaction.objects.filter(function="mint", txgroup=1).last().args
     assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 22} == mint2_args
 
     tx_transfer_args = TezosTransaction.objects.filter(function="transfer", txgroup=2).first().args

@@ -386,7 +386,7 @@ class Transaction(models.Model):
 
     class Meta:
         unique_together = ('hash', 'txgroup',)
-        order_by = '-created_at'
+        ordering = ['-created_at']
 
     def __str__(self):
         if self.name:
