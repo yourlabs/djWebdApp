@@ -9,7 +9,7 @@ extras_require = dict(
         'web3',
     ],
     tezos=[
-        'pytezos',
+        'pytezos<3.4.2',
     ],
     binary=[
         'pysodium',
