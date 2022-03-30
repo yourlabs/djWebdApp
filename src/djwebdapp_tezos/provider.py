@@ -49,7 +49,7 @@ class TezosProvider(Provider):
         for ops in block.operations():
             for op in ops:
                 hash = op['hash']
-                for content in op.get('contents', []):
+                for txgroup, content in enumerate(op.get('contents', [])):
                     if content['kind'] == 'origination':
                         if 'metadata' not in content:
                             continue
@@ -66,7 +66,7 @@ class TezosProvider(Provider):
                         destination = content.get('destination', None)
                         if destination not in self.addresses:
                             continue
-                        self.index_call(level, op, content)
+                        self.index_call(level, op, content, txgroup)
 
     def index_contract(self, level, op, content):
         self.logger.info(f'Syncing origination {op["hash"]}')
@@ -86,7 +86,7 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
-    def index_call(self, level, op, content):
+    def index_call(self, level, op, content, txgroup):
         self.logger.info(f'Syncing transaction {op["hash"]}')
         contract = self.transaction_class.objects.get(
             blockchain=self.blockchain,
@@ -94,10 +94,12 @@ class TezosProvider(Provider):
         )
         call = contract.call_set.select_subclasses().filter(
             hash=op['hash'],
+            txgroup=txgroup,
         ).first()
         if not call:
             call = self.transaction_class(
                 hash=op['hash'],
+                txgroup=txgroup,
                 contract=contract,
                 blockchain=self.blockchain,
             )

@@ -26,16 +26,25 @@ def test_index_batch_transaction(include):
         'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td',
         22,
     )
-    # both `mint1` and `mint2` will be included in the same "transaction group",
-    # meaning that they will both get the same transaction hash.
-    # though `djwebdapp.models.Transaction.hash` have a `UNIQUE` constraint.
-    variables['client'].bulk(mint1, mint2).send(min_confirmations=2)
+    transfer = variables['client'].contract(variables['address']).transfer({
+        "_from": 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td',
+        "_to": 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx',
+        "value": 1,
+    })
+    variables['client'].bulk(mint1, mint2, transfer).send(min_confirmations=2)
 
     contract.blockchain.provider.index()
 
-    txs_args = [tx.args for tx in TezosTransaction.objects.filter(function="mint")]
-    assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 22} in txs_args
+    mint1_args = TezosTransaction.objects.filter(function="mint", txgroup=0).last().args
+    assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 11} == mint1_args
 
-    # This currently fails. The first transaction in the bulk call will not be
-    # indexed
-    assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 11} in txs_args
+    mint2_args = TezosTransaction.objects.filter(function="mint", txgroup=1).first().args
+    assert {'_to': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td', 'value': 22} == mint2_args
+
+    tx_transfer_args = TezosTransaction.objects.filter(function="transfer", txgroup=2).first().args
+    expected_tx_transfer_args = {
+        '_from': 'tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td',
+        '_to': 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx',
+        'value': 1,
+    }
+    assert expected_tx_transfer_args == tx_transfer_args

@@ -261,10 +261,12 @@ class Transaction(models.Model):
         on_delete=models.CASCADE,
     )
     hash = models.CharField(
-        unique=True,
         max_length=255,
         null=True,
         blank=True,
+    )
+    txgroup = models.BigIntegerField(
+        default=0,
     )
     gasprice = models.BigIntegerField(
         blank=True,
@@ -381,6 +383,9 @@ class Transaction(models.Model):
         blank=True,
     )
     objects = InheritanceManager()
+
+    class Meta:
+        unique_together = ('hash', 'txgroup',)
 
     def __str__(self):
         if self.name:
