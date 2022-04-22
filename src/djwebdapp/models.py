@@ -260,13 +260,21 @@ class Transaction(models.Model):
         'Blockchain',
         on_delete=models.CASCADE,
     )
+    level = models.PositiveIntegerField(
+        db_index=True,
+        null=True,
+        blank=True,
+    )
     hash = models.CharField(
         max_length=255,
         null=True,
         blank=True,
     )
-    txgroup = models.BigIntegerField(
-        default=0,
+    counter = models.PositiveIntegerField(
+        null=True,
+    )
+    nonce = models.PositiveIntegerField(
+        null=True,
     )
     gasprice = models.BigIntegerField(
         blank=True,
@@ -275,11 +283,6 @@ class Transaction(models.Model):
     gas = models.BigIntegerField(
         blank=True,
         null=True,
-    )
-    level = models.PositiveIntegerField(
-        db_index=True,
-        null=True,
-        blank=True,
     )
     last_fail = models.DateTimeField(
         null=True,
@@ -385,7 +388,13 @@ class Transaction(models.Model):
     objects = InheritanceManager()
 
     class Meta:
-        unique_together = ('hash', 'txgroup',)
+        unique_together = (
+            'blockchain',
+            # 'level', ??
+            'hash',
+            'counter',
+            'nonce',
+        )
         ordering = ['-created_at']
 
     def __str__(self):

@@ -42,6 +42,10 @@ class Provider:
         self.wallet = wallet
         self.blockchain = wallet.blockchain if wallet else blockchain
 
+    def download(self, target):
+        """ Download a contract history from the configured indexer. """
+        raise NotImplementedError()
+
     def index_level(self, level):
         raise NotImplementedError()
 

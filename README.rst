@@ -88,7 +88,7 @@ services <https://docs.gitlab.com/ee/ci/services/>`_\ , we'll refer to our servi
 by hostname from now on, which is why we add the following to
 ``/etc/hosts``::
 
-   127.0.0.1 tzlocal ethlocal
+   127.0.0.1 tzlocal tzkt-api ethlocal
 
 You should then have:
 
@@ -96,6 +96,7 @@ You should then have:
   ``ethlocal:30303``,
 - a local tezos sandbox on ``tzlocal:8732`` which autobakes every second,
   useable like geth development mode.
+- a local tezos indexer to use the contract history download() function.
 
 See documentation for **Example contract deployment** in each blockchain
 specific documentation pages for more pointers.

@@ -1,11 +1,13 @@
 from decimal import Decimal
 import logging
+import requests
+import urllib
 
-from django.db.models import Q
+from django.db.models import Q, signals
 from django.core.exceptions import ValidationError
 
 from djwebdapp.exceptions import PermanentError
-from djwebdapp.models import Account
+from djwebdapp.models import Account, setup
 from djwebdapp.provider import Provider
 
 from djwebdapp_tezos.models import TezosTransaction
@@ -66,7 +68,7 @@ class TezosProvider(Provider):
                         destination = content.get('destination', None)
                         if destination not in self.addresses:
                             continue
-                        self.index_call(level, op, content, txgroup)
+                        self.index_call(level, op, content)
 
     def index_contract(self, level, op, content):
         self.logger.info(f'Syncing origination {op["hash"]}')
@@ -86,7 +88,7 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
-    def index_call(self, level, op, content, txgroup):
+    def index_call(self, level, op, content):
         self.logger.info(f'Syncing transaction {op["hash"]}')
         contract = self.transaction_class.objects.get(
             blockchain=self.blockchain,
@@ -94,12 +96,17 @@ class TezosProvider(Provider):
         )
         call = contract.call_set.select_subclasses().filter(
             hash=op['hash'],
-            txgroup=txgroup,
+            counter=content['counter'],
+            level=level,
+            nonce=content.get('nonce', None),
         ).first()
+
         if not call:
             call = self.transaction_class(
                 hash=op['hash'],
-                txgroup=txgroup,
+                counter=content['counter'],
+                level=level,
+                nonce=content.get('nonce', None),
                 contract=contract,
                 blockchain=self.blockchain,
             )
@@ -182,3 +189,121 @@ class TezosProvider(Provider):
         except ValueError as e:
             raise PermanentError(*e.args)
         self.write_transaction(tx, transaction)
+
+    def download(self, target):
+        """
+        Import transactions from tzkt for a contract
+        """
+        api = self.blockchain.configuration.get(
+            'tzkt_url',
+            'https://api.tzkt.io',  # default indexer?
+        )
+        url = f'{api}/v1/operations/transactions?'
+        url += f'&target={urllib.parse.quote(target)}'
+        url += f'&level.le={self.head - 2}'
+
+        contract, _ = self.transaction_class.objects.get_or_create(
+            blockchain=self.blockchain,
+            address=target,
+        )
+
+        def get(offset, limit):
+            return requests.get(url + f'&offset={offset}&limit={limit}').json()
+
+        def yield_operations():
+            offset = 0
+            limit = 10_000
+            while data := get(offset, limit):
+                for operation in data:
+                    if operation['type'] != 'transaction':
+                        continue
+
+                    if operation['status'] != 'applied':
+                        continue
+
+                    yield operation
+                offset += limit
+
+        total = 0
+        operations = dict()
+        for operation in yield_operations():
+            total += 1
+
+            # generate a key for the operation group
+            key = (
+                operation['level'],
+                operation['hash'],
+                operation['counter'],
+                operation.get('nonce', 0),
+            )
+
+            operations[key] = operation
+
+        # disable automatic refresh of balances to speed up the whole process
+        signals.pre_save.disconnect(setup, sender=Account)
+        # we're also going to cache Account objects
+        accounts = dict()
+
+        # fetch all calls we already have in DB
+        calls = {
+            (call.level, call.hash, call.counter, call.nonce): call
+            for call in self.transaction_class.objects.filter(
+                contract=contract,
+                state='done',
+            )
+        }
+
+        number = 0
+        for key in sorted(operations.keys()):
+            number += 1
+            level, hash, counter, nonce = key
+            self.logger.debug(' '.join((
+                f'[{number}/{total}]',
+                hash,
+                f'level={level}',
+                f'counter={counter}',
+                f'nonce={nonce}',
+            )))
+
+            if key in calls:
+                continue  # let's not update for now
+
+            operation = operations[key]
+
+            if operation['sender']['address'] in accounts:
+                sender = accounts[operation['sender']['address']]
+            else:
+                sender, _ = Account.objects.get_or_create(
+                    address=operation['sender']['address'],
+                    blockchain=self.blockchain,
+                )
+                accounts[sender.address] = sender
+
+            function = operation['parameter']['entrypoint']
+            args = operation['parameter']['value']
+
+            for key, value in args.items():
+                try:
+                    args[key] = int(value)
+                except ValueError:
+                    continue
+
+            call = self.transaction_class(
+                blockchain=self.blockchain,
+                contract=contract,
+                sender=sender,
+                level=level,
+                hash=hash,
+                counter=counter,
+                nonce=nonce if nonce else None,
+                kind='call',
+                function=function,
+                args=args,
+                metadata=operation,
+                gas=operation['gasUsed'],
+                state='done',
+            )
+            call.save()
+
+        # reconnect Account signal
+        signals.pre_save.connect(setup, sender=Account)

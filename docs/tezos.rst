@@ -97,6 +97,18 @@ node, let's index a contract, also programatically in ``./manage.py shell``:
 .. literalinclude:: ../src/djwebdapp_example/tezos/index.py
   :language: Python
 
+Indexing a contract with a lot of history
+-----------------------------------------
+
+This process is very slow to index a smart contract that was deployed say 200k
+blocks ago. To acheive this, we can use the tzkt API on tezos as such:
+
+.. code-block:: python
+
+    blockchain.provider.download(your_contract_address)
+
+You can also use the ``./manage.py history_download`` command.
+
 Normalizing incomming data: Models
 ----------------------------------
 
