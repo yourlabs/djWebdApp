@@ -180,6 +180,28 @@ class Blockchain(models.Model):
         while self.provider.head < level:
             time.sleep(.1)
 
+    def remaining(self):
+        """ 
+        Return contracts remaining to index. 
+
+        This is used by the back-indexer to know when it can stop indexing in
+        the past.
+        """
+        return self.provider.transaction_class.objects.filter(
+            kind='contract',
+            level=None,
+        )
+
+    @property
+    def head(self):
+        return self.provider.head
+
+
+class Block(models.Model):
+    level = models.BigIntegerField()
+    blockchain = models.ForeignKey(Blockchain, on_delete=models.CASCADE)
+    indexed_at = models.DateTimeField(null=True, blank=True)
+
 
 class Node(models.Model):
     """
@@ -203,6 +225,10 @@ class Node(models.Model):
     priority = models.IntegerField(
         default=0,
         help_text='Nodes with the highest priority will be used first',
+    )
+    workers = models.IntegerField(
+        default=1,
+        help_text='Number of workers that can hit this node simultanously',
     )
 
 

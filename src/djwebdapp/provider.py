@@ -34,14 +34,28 @@ class Provider:
     @property
     def client(self):
         cached = getattr(self, '_client', None)
-        if cached:
+        if cached and self.node == self._client_node:
+            # enforce client re-creation if node has changed
             return cached
         self._client = self.get_client()
+        self._client_node = self.node
         return self._client
 
     @client.setter
     def client(self, value):
         self._client = value
+
+    @property
+    def node(self):
+        if '_node' not in self.__dict__:
+            self._node = self.blockchain.node_set.filter(
+                is_active=True,
+            ).order_by('-priority').first()
+        return self._node
+
+    @node.setter
+    def node(self, value):
+        self._node = value
 
     def index_init(self):
         self.hashes = self.transaction_class.objects.filter(

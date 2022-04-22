@@ -27,7 +27,7 @@ class TezosProvider(Provider):
                 self.wallet.get_secret_key()
             )
         return pytezos.using(
-            shell=self.blockchain.node_set.first().endpoint,
+            shell=self.node.endpoint,
             **kwargs,
         )
 
