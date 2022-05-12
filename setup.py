@@ -6,10 +6,10 @@ extras_require = dict(
         'mnemonic',
     ],
     ethereum=[
-        'web3',
+        'web3>=6.0.0b2',
     ],
     tezos=[
-        'pytezos<3.4.0',
+        'pytezos>3.4',
     ],
     binary=[
         'pysodium',

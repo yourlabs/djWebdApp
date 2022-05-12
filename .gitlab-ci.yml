@@ -14,6 +14,7 @@ qa:
 
 docs:
   stage: test
+  image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
   script:
   - pip install sphinx -r docs/requirements.txt
   - cd docs && make html SPHINXOPTS="-W --keep-going -n"
