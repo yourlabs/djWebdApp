@@ -1,9 +1,35 @@
+from django import db
+from multiprocessing import get_context
+from django.conf import settings
 import random
 
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
 from djwebdapp.signals import get_args
+
+
+def deploy_call(arg):
+    logger, call = arg
+    logger.info(f'Calling function {call}')
+    call.deploy()
+    logger.info(f'Called function {call}')
+    return call
+
+
+def get_calls_distinct_sender(calls_query_set, n_calls):
+    if "postgres" not in settings.DATABASES["default"]["ENGINE"]:
+        calls = list(calls_query_set)
+        used = set()
+        distinct_calls = [
+            call
+            for call in calls
+            if call.sender not in used and (used.add(call) or True)
+        ]
+    else:
+        distinct_calls = calls_query_set.distinct('sender')[0:n_calls]
+
+    return distinct_calls
 
 
 class Provider:
@@ -185,12 +211,25 @@ class Provider:
             return contract
         self.logger.info('Found 0 contracts to deploy')
 
-        # is there any new contract call ready to deploy?
-        call = self.calls().filter(last_fail=None).first()
-        if call:
-            self.logger.info(f'Calling function {call}')
-            call.deploy()
-            return call
+        n_calls = 10
+        calls = self.calls().filter(last_fail=None)
+        distinct_calls = get_calls_distinct_sender(calls, n_calls)
+
+        if distinct_calls:
+            p = get_context("fork").Pool(n_calls)
+
+            db.connections.close_all()
+            results = p.map(
+                deploy_call,
+                [(self.logger, call) for call in list(calls)]
+            )
+            for result in results:
+                result.save()
+
+            if len(calls) == 1:
+                return calls[0]
+            else:
+                return calls
         self.logger.info('Found 0 calls to send')
 
         # is there any transfer to retry from an account with balance?
