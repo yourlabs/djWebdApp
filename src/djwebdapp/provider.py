@@ -11,9 +11,15 @@ from djwebdapp.signals import get_args
 
 def deploy_call(arg):
     logger, call = arg
-    logger.info(f'Calling function {call}')
-    call.deploy()
-    logger.info(f'Called function {call}')
+
+    logger.debug('starting {call} ...')
+    try:
+        call.deploy()
+    except:
+        logger.exception('failed {call}')
+    else:
+        logger.info('success {call}')
+
     return call
 
 
@@ -216,10 +222,10 @@ class Provider:
         distinct_calls = get_calls_distinct_sender(calls, n_calls)
 
         if distinct_calls:
-            p = get_context("fork").Pool(n_calls)
+            pool = get_context("fork").Pool(n_calls)
 
             db.connections.close_all()
-            results = p.map(
+            results = pool.map(
                 deploy_call,
                 [(self.logger, call) for call in list(calls)]
             )
