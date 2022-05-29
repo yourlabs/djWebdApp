@@ -39,3 +39,9 @@ blockchain.provider.index()
 
 # Now spool will deploy the mint call!
 assert blockchain.provider.spool() == mint
+
+mint.refresh_from_db()
+
+blockchain.wait(mint.level + 1)
+
+blockchain.provider.index()

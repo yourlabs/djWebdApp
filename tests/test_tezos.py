@@ -53,6 +53,21 @@ def test_spool(include):
 
 
 @pytest.mark.django_db
+def test_spool_call_parallel(include):
+    include(
+        'djwebdapp_example/tezos',
+        'client',
+        'blockchain',
+        'wallet_import',
+        '../wallet_create',
+        'transfer',
+        'load',
+        'deploy_contract',
+        'call_parallel',
+    )
+
+
+@pytest.mark.django_db
 def test_docs(include, admin_smoketest):
     include(
         'djwebdapp_example/tezos',

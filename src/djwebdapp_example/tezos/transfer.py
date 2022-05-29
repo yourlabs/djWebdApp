@@ -1,8 +1,8 @@
 # Use the transaction model with an amount argument to transfer coins
 from djwebdapp.models import Transaction
 transaction = Transaction.objects.create(
-    name='Provision 10 coins',
-    amount=10,
+    name='Provision 1_000_000 coins',
+    amount=1_000_000,
     sender=bootstrap,
     receiver=new_wallet,
     blockchain=blockchain,
@@ -13,3 +13,7 @@ transaction.deploy()
 
 # Wait one block level
 transaction.blockchain.wait(transaction.level + 1)
+
+blockchain.provider.index()
+
+new_wallet.refresh_balance()
