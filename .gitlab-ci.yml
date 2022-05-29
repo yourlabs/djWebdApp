@@ -44,8 +44,11 @@ test:
     FF_NETWORK_PER_BUILD: "1"
 
   artifacts:
+    expire_in: 2 days
     reports:
-      cobertura: coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
   services:
   - alias: tzlocal
