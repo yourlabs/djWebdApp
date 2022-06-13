@@ -38,10 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'djwebdapp',
     'djwebdapp_ethereum',
     'djwebdapp_tezos',
     'djwebdapp_example',
+
+    'rest_framework',
+    'djwebdapp_rest_framework',
 ]
 
 MIDDLEWARE = [

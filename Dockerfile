@@ -9,6 +9,7 @@ RUN useradd --home-dir /app --uid 1000 app && mkdir -p /app && chown -R app /app
 RUN pip install wheel
 # until release of
 RUN pip install https://github.com/shmpwk/setuptools-markdown/archive/refs/heads/patch-1.zip
+RUN pip install django-rest-framework
 WORKDIR /app
 
 COPY setup.py README.rst /app/
