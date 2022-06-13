@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'djwebdapp_example',
 
     'rest_framework',
+    'rest_framework.authtoken',
     'djwebdapp_rest_framework',
 ]
 
