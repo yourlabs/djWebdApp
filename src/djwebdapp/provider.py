@@ -104,7 +104,7 @@ class Provider:
 
         reorg = (
             self.blockchain.max_level
-            and start_level < self.blockchain.max_level
+            and current_level < self.blockchain.max_level
         )
         if reorg:
             self.logger.warning(
@@ -114,14 +114,14 @@ class Provider:
             # reorg
             Transaction.objects.filter(
                 sender__blockchain=self.blockchain,
-                level__gte=self.blockchain.max_level,
+                level__gte=current_level,
             ).exclude(level=None).update(
                 level=None,
                 hash=None,
                 address=None,
                 state='deleted',
             )
-            self.blockchain.max_level = self.blockchain.max_level
+            self.blockchain.max_level = current_level
             self.blockchain.save()
             return  # commit to reorg in a transaction
 
