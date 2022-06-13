@@ -81,17 +81,20 @@ class Provider:
         ).exclude(
             hash=None
         ).values_list('hash', flat=True)
+        self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
         self.contracts = self.transaction_class.objects.exclude(
             address=None,
         ).filter(
             blockchain=self.blockchain,
         )
+        self.logger.info(f'Found {len(self.contracts)} contracts to index')
 
         self.addresses = self.contracts.values_list(
             'address',
             flat=True,
         )
+        self.logger.info(f'Found {len(self.addresses)} addresses to index')
 
     def deploy(self, transaction, min_confirmations):
         raise NotImplementedError()
@@ -104,6 +107,10 @@ class Provider:
             and start_level < self.blockchain.max_level
         )
         if reorg:
+            self.logger.warning(
+                f'Detected reorg in {self.blockchain} '
+                f'from {self.blockchain.max_level} to {start_level}'
+            )
             # reorg
             Transaction.objects.filter(
                 sender__blockchain=self.blockchain,
