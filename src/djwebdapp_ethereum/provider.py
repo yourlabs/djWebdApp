@@ -31,7 +31,7 @@ class EthereumProvider(Provider):
         return client
 
     def get_balance(self, address=None):
-        weis = self.client.eth.getBalance(
+        weis = self.client.eth.get_balance(
             address
             or getattr(self.wallet, 'address', False)
             or self.client.eth.default_account
@@ -149,9 +149,9 @@ class EthereumProvider(Provider):
             'from': transaction.sender.address,
             'value': self.client.toWei(transaction.amount, 'ether'),
         }
-        tx['gas'] = self.client.eth.estimateGas(tx)
+        tx['gas'] = self.client.eth.estimate_gas(tx)
         tx['gasPrice'] = self.client.eth.gas_price
-        tx['nonce'] = self.client.eth.getTransactionCount(
+        tx['nonce'] = self.client.eth.get_transaction_count(
             transaction.sender.address
         )
         tx['chainId'] = self.client.eth.chain_id
@@ -177,15 +177,15 @@ class EthereumProvider(Provider):
         transaction.address = receipt.contractAddress
 
     def write_transaction(self, sender, tx):
-        nonce = self.client.eth.getTransactionCount(sender.address)
+        nonce = self.client.eth.get_transaction_count(sender.address)
         options = {
             'from': sender.address,
             'nonce': nonce,
         }
-        options['gas'] = self.client.eth.estimateGas(
-            tx.buildTransaction(options)
+        options['gas'] = self.client.eth.estimate_gas(
+            tx.build_transaction(options)
         )
-        built = tx.buildTransaction(options)
+        built = tx.build_transaction(options)
         signed_txn = self.client.eth.account.sign_transaction(
             built,
             private_key=sender.get_secret_key(),
