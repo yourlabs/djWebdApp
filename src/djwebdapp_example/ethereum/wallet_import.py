@@ -14,7 +14,7 @@ client.eth.send_transaction(dict(
 
 # wait until the blockchain validates the transfer
 import time
-while not client.eth.getBalance(address):
+while not client.eth.get_balance(address):
     time.sleep(.1)
 
 # import the freshly created wallet by secret key

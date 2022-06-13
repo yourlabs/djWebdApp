@@ -9,16 +9,16 @@ from djwebdapp.models import Transaction
 from djwebdapp.signals import get_args
 
 
-def deploy_call(arg):
+def call_deploy(arg):
     logger, call = arg
 
-    logger.debug('starting {call} ...')
+    logger.debug(f'starting {call} ...')
     try:
         call.deploy()
-    except:
-        logger.exception('failed {call}')
+    except Exception:
+        logger.exception(f'failed {call}')
     else:
-        logger.info('success {call}')
+        logger.info(f'success {call}')
 
     return call
 
@@ -81,17 +81,20 @@ class Provider:
         ).exclude(
             hash=None
         ).values_list('hash', flat=True)
+        self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
         self.contracts = self.transaction_class.objects.exclude(
             address=None,
         ).filter(
             blockchain=self.blockchain,
         )
+        self.logger.info(f'Found {len(self.contracts)} contracts to index')
 
         self.addresses = self.contracts.values_list(
             'address',
             flat=True,
         )
+        self.logger.info(f'Found {len(self.addresses)} addresses to index')
 
     def deploy(self, transaction, min_confirmations):
         raise NotImplementedError()
@@ -101,20 +104,24 @@ class Provider:
 
         reorg = (
             self.blockchain.max_level
-            and start_level < self.blockchain.max_level
+            and current_level < self.blockchain.max_level
         )
         if reorg:
+            self.logger.warning(
+                f'Detected reorg in {self.blockchain} '
+                f'from {self.blockchain.max_level} to {start_level}'
+            )
             # reorg
             Transaction.objects.filter(
                 sender__blockchain=self.blockchain,
-                level__gte=self.blockchain.max_level,
+                level__gte=current_level,
             ).exclude(level=None).update(
                 level=None,
                 hash=None,
                 address=None,
                 state='deleted',
             )
-            self.blockchain.max_level = self.blockchain.max_level
+            self.blockchain.max_level = current_level
             self.blockchain.save()
             return  # commit to reorg in a transaction
 
@@ -226,7 +233,7 @@ class Provider:
 
             db.connections.close_all()
             results = pool.map(
-                deploy_call,
+                call_deploy,
                 [(self.logger, call) for call in list(calls)]
             )
             for result in results:

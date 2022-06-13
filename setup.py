@@ -6,7 +6,7 @@ extras_require = dict(
         'mnemonic',
     ],
     ethereum=[
-        'web3>=6.0.0b2',
+        'web3>=6.0.0b3',
     ],
     tezos=[
         'pytezos>3.4',

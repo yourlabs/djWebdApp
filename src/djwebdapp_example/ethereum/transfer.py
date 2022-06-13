@@ -1,8 +1,8 @@
 # Use the transaction model with an amount argument to transfer coins
 from djwebdapp.models import Transaction
 transaction = Transaction.objects.create(
-    name='Provision 10 coins',
-    amount=10,
+    name='Provision 1.000 coins',
+    amount=1_000,
     sender=bootstrap,
     receiver=new_wallet,
     blockchain=blockchain,
