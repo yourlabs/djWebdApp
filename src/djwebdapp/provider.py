@@ -9,16 +9,16 @@ from djwebdapp.models import Transaction
 from djwebdapp.signals import get_args
 
 
-def deploy_call(arg):
+def call_deploy(arg):
     logger, call = arg
 
-    logger.debug('starting {call} ...')
+    logger.debug(f'starting {call} ...')
     try:
         call.deploy()
-    except:
-        logger.exception('failed {call}')
+    except Exception:
+        logger.exception(f'failed {call}')
     else:
-        logger.info('success {call}')
+        logger.info(f'success {call}')
 
     return call
 
@@ -233,7 +233,7 @@ class Provider:
 
             db.connections.close_all()
             results = pool.map(
-                deploy_call,
+                call_deploy,
                 [(self.logger, call) for call in list(calls)]
             )
             for result in results:
