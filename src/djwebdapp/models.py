@@ -458,7 +458,7 @@ class Transaction(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.kind:
-            if not self.function and not self.receiver:
+            if not self.function and not self.receiver_id:
                 self.kind = 'contract'
             elif self.function:
                 self.kind = 'function'

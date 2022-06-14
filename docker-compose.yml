@@ -33,7 +33,7 @@ services:
       - db
     environment:
       ConnectionStrings__DefaultConnection: host=tzkt-db;port=5432;database=tzkt_db;username=tzkt;password=qwerty;
-      TZKT_API_KESTREL__ENDPOINTS__HTTP__URL: http://0.0.0.0:5000
+      Kestrel__Endpoints__Http__Url: http://0.0.0.0:5000
       TezosNode__Endpoint: http://tzlocal:8732
     expose:
       - 5000
