@@ -38,5 +38,8 @@ def contract_micheline(sender, instance, **kwargs):
     if not instance.address or instance.micheline:
         return
 
+    if instance.kind != 'contract':
+        return  # only fetch micheline for contracts
+
     interface = instance.blockchain.provider.client.contract(instance.address)
     instance.micheline = interface.to_micheline()
