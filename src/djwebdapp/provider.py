@@ -26,7 +26,7 @@ def get_calls_distinct_sender(calls_query_set, n_calls):
     senders = set()
     distinct_calls = []
     for call in calls_query_set:
-        if call.sender not in senders:
+        if call.sender not in senders and len(distinct_calls) <= n_calls:
             distinct_calls.append(call)
             senders.add(call.sender)
 
@@ -219,7 +219,7 @@ class Provider:
             return contract
         self.logger.info('Found 0 contracts to deploy')
 
-        n_calls = 10
+        n_calls = 15
         calls = self.calls().filter(last_fail=None)
         distinct_calls = get_calls_distinct_sender(calls, n_calls)
 
