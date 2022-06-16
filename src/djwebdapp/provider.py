@@ -1,6 +1,5 @@
 from django import db
 from multiprocessing import get_context
-from django.conf import settings
 import random
 
 from django.db.models import Q
