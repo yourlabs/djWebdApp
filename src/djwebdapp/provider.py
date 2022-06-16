@@ -228,15 +228,15 @@ class Provider:
             pool = get_context("fork").Pool(n_calls)
             results = pool.map(
                 call_deploy,
-                [(self.logger, call) for call in list(calls)]
+                [(self.logger, call) for call in list(distinct_calls)]
             )
             for result in results:
                 result.save()
 
-            if len(calls) == 1:
-                return calls[0]
+            if len(distinct_calls) == 1:
+                return distinct_calls[0]
             else:
-                return calls
+                return distinct_calls
         self.logger.info('Found 0 calls to send')
 
         # is there any transfer to retry from an account with balance?
