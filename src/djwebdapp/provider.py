@@ -24,16 +24,12 @@ def call_deploy(arg):
 
 
 def get_calls_distinct_sender(calls_query_set, n_calls):
-    if "postgres" not in settings.DATABASES["default"]["ENGINE"]:
-        calls = list(calls_query_set)
-        used = set()
-        distinct_calls = [
-            call
-            for call in calls
-            if call.sender not in used and (used.add(call) or True)
-        ]
-    else:
-        distinct_calls = calls_query_set.distinct('sender')[0:n_calls]
+    senders = set()
+    distinct_calls = []
+    for call in calls_query_set:
+        if call.sender not in senders:
+            distinct_calls.append(call)
+            senders.add(call.sender)
 
     return distinct_calls
 
