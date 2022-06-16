@@ -26,7 +26,7 @@ def get_calls_distinct_sender(calls_query_set, n_calls):
     senders = set()
     distinct_calls = []
     for call in calls_query_set:
-        if call.sender not in senders and len(distinct_calls) <= n_calls:
+        if call.sender not in senders and len(distinct_calls) < n_calls:
             distinct_calls.append(call)
             senders.add(call.sender)
 
