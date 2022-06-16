@@ -224,9 +224,8 @@ class Provider:
         distinct_calls = get_calls_distinct_sender(calls, n_calls)
 
         if distinct_calls:
-            pool = get_context("fork").Pool(n_calls)
-
             db.connections.close_all()
+            pool = get_context("fork").Pool(n_calls)
             results = pool.map(
                 call_deploy,
                 [(self.logger, call) for call in list(calls)]
