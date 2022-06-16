@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for blockchain in Blockchain.objects.filter(is_active=True):
             try:
-                blockchain.provider.info(f'Indexing {blockchain}')
+                blockchain.provider.logger.info(f'Indexing {blockchain}')
                 blockchain.provider.index()
             except:  # noqa
                 blockchain.provider.logger.exception(
