@@ -3,6 +3,7 @@ from djwebdapp.models import Blockchain
 blockchain, _ = Blockchain.objects.get_or_create(
     name='Tezos Local',
     provider_class='djwebdapp_tezos.provider.TezosProvider',
+    min_confirmations=2,  # two blocks to be safe from reorgs
 )
 
 # Add our node to the blockchain

@@ -33,7 +33,7 @@ def test_index_batch_transaction(include, method):
         "value": 1,
     })
     result = variables['client'].bulk(mint1, mint2, transfer).send(min_confirmations=2)
-    blockchain.wait(blockchain.provider.head + 2)
+    blockchain.wait_blocks()
 
     if method == 'index':
         contract.blockchain.provider.index()

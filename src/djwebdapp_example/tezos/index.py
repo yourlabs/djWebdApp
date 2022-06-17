@@ -14,6 +14,9 @@ assert contract.micheline
 # But calls have not yet been synchronized
 assert not contract.call_set.count()
 
+# Wait for blockchain.confirmation_blocks, 2 here
+blockchain.wait()
+
 # Let's index the blockchain, you could also run ./manage.py index
 blockchain.provider.index()
 

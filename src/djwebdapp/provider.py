@@ -1,7 +1,9 @@
-from django import db
 from multiprocessing import get_context
+import logging
 import random
 
+from django import db
+from django.conf import settings
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
@@ -36,6 +38,11 @@ def get_calls_distinct_sender(calls_query_set, n_calls):
 class Provider:
     exclude_states = (
         'held', 'aborted', 'import', 'importing', 'watching', 'done'
+    )
+    spool_states = (
+        'deleted',
+        'deploy',
+        'retrying',
     )
 
     def __init__(self, blockchain=None, wallet=None):
@@ -77,13 +84,14 @@ class Provider:
     def index_init(self):
         self.hashes = self.transaction_class.objects.filter(
             blockchain=self.blockchain
-        ).exclude(
-            hash=None
+        ).filter(
+            Q(state='confirm') | ~Q(hash=None)
         ).values_list('hash', flat=True)
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
-        self.contracts = self.transaction_class.objects.exclude(
-            address=None,
+        self.contracts = self.transaction_class.objects.filter(
+            Q(state='confirm') | ~Q(address=None),
+            kind='contract',
         ).filter(
             blockchain=self.blockchain,
         )
@@ -99,7 +107,9 @@ class Provider:
         raise NotImplementedError()
 
     def index(self):
-        start_level = current_level = self.head
+        start_level = current_level = (
+            self.head - self.blockchain.min_confirmations + 1
+        )
 
         reorg = (
             self.blockchain.max_level
