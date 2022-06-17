@@ -318,7 +318,7 @@ class Transaction(models.Model):
         max_length=200,
         db_index=True,
     )
-    error = models.TextField(blank=True)
+    error = models.TextField(blank=True, null=True)
     history = models.JSONField(default=list)
     states = [i[0] for i in STATE_CHOICES]
     amount = models.PositiveIntegerField(
@@ -380,10 +380,6 @@ class Transaction(models.Model):
             ('function', 'Function call'),
             ('transfer', 'Transfer'),
         )
-    )
-    error = models.TextField(
-        null=True,
-        blank=True,
     )
     objects = InheritanceManager()
 
