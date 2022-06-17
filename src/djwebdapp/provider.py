@@ -95,7 +95,7 @@ class Provider:
         )
         self.logger.info(f'Found {len(self.addresses)} addresses to index')
 
-    def deploy(self, transaction, min_confirmations):
+    def deploy(self, transaction):
         raise NotImplementedError()
 
     def index(self):
