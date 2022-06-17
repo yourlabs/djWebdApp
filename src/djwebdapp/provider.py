@@ -160,6 +160,7 @@ class Provider:
 
     def contracts(self):
         return self.transaction_class.objects.filter(
+            blockchain=self.blockchain,
             kind='contract',
             hash=None,
             sender__blockchain__is_active=True,
@@ -174,10 +175,15 @@ class Provider:
             Q(sender__balance=None)
             | Q(sender__balance=0)
             | Q(state__in=self.exclude_states)
-        ).order_by('created_at')
+        ).select_related(
+            'blockchain'
+        ).order_by(
+            'created_at'
+        )
 
     def calls(self):
         return self.transaction_class.objects.filter(
+            blockchain=self.blockchain,
             kind='function',
             hash=None,
             sender__blockchain__is_active=True,
@@ -190,10 +196,15 @@ class Provider:
             | Q(state__in=self.exclude_states)
             | Q(contract__address='')
             | Q(contract__address__isnull=True)
-        ).order_by('created_at')
+        ).select_related(
+            'blockchain'
+        ).order_by(
+            'created_at'
+        )
 
     def transfers(self):
         return self.transaction_class.objects.filter(
+            blockchain=self.blockchain,
             kind='transfer',
             hash=None,
             sender__blockchain__is_active=True,
@@ -202,7 +213,11 @@ class Provider:
             Q(sender__balance=None)
             | Q(sender__balance=0)
             | Q(state__in=self.exclude_states)
-        ).order_by('created_at')
+        ).select_related(
+            'blockchain'
+        ).order_by(
+            'created_at'
+        )
 
     def spool(self):
         # senders which have already deployed during this block must be
