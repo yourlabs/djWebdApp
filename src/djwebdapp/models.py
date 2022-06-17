@@ -6,7 +6,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import signals
+from django.db.models import Max, signals
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -158,6 +158,10 @@ class Blockchain(models.Model):
         null=True,
         help_text='Lowest indexed level',
     )
+    min_confirmations = models.PositiveIntegerField(
+        default=2,
+        help_text='Number of confirmation blocks from confirm to done states',
+    )
     configuration = models.JSONField(
         default=dict,
         blank=True,
@@ -168,18 +172,46 @@ class Blockchain(models.Model):
 
     @property
     def provider_cls(self):
+        """ Return the imported provider class. """
         parts = self.provider_class.split('.')
         mod = importlib.import_module('.'.join(parts[:-1]))
         return getattr(mod, parts[-1])
 
     @property
     def provider(self):
+        """ Return a fresh instance of the provider class bound to self. """
         return self.provider_cls(blockchain=self)
 
-    def wait(self, level):
+    def wait(self):
+        """
+        Wait for all transactions to be confirmed by min_confirmations blocks.
+
+        For use in between spool and index calls:
+
+        .. code-block:: python
+
+            blockchain.provider.spool()
+            blockchain.wait()
+            blockchain.provider.index()
+        """
+        max_level = self.transaction_set.filter(
+            state='confirm',
+        ).aggregate(
+            max_level=Max('level')
+        )['max_level']
+        if not max_level:
+            return  # no transaction to wait.
+        self.wait_level(max_level + self.min_confirmations)
+
+    def wait_level(self, level):
+        """ Wait for the blockchain head to reach a given level. """
         while self.provider.head < level:
             time.sleep(.1)
 
+    def wait_blocks(self, blocks=None):
+        """ Wait for the blockchain head to advance a number of blocks. """
+        blocks = blocks or self.min_confirmations
+        self.wait_level(self.provider.head + blocks)
 
 class Node(models.Model):
     """
@@ -307,10 +339,10 @@ class Transaction(models.Model):
         ('aborted', _('Aborted')),
         ('deploy', _('To deploy')),
         ('deploying', _('Deploying')),
+        ('retry', _('To retry')),
         ('retrying', _('Retrying')),
-        ('confirm', _('To confirm')),
-        ('confirming', _('Confirming')),
-        ('done', _('Finished')),
+        ('confirm', _('Deployed to confirm')),
+        ('done', _('Confirmed finished')),
     )
     state = models.CharField(
         choices=STATE_CHOICES,
@@ -406,11 +438,22 @@ class Transaction(models.Model):
             return str(self.pk)
 
     def state_set(self, state):
+        if state == 'done':
+            confirmed_level = self.level + self.blockchain.min_confirmations
+            head = self.blockchain.provider.head
+            if confirmed_level > head:
+                self.blockchain.provider.logger.debug(
+                    f'Set {self} to confirm instead of done'
+                )
+                state = 'confirm'
         self.state = state
         self.history.append([
             self.state,
             int(datetime.datetime.now().strftime('%s')),
         ])
+        self.blockchain.provider.logger.debug(
+            f'{self}.state={state}'
+        )
         self.save()
 
     @property
@@ -442,15 +485,13 @@ class Transaction(models.Model):
                 ])
                 self.state_set('aborted')
             else:
-                self.state_set('retrying')
+                self.state_set('retry')
             raise
         else:
             self.last_fail = None
             self.error = ''
-            if self.kind == 'contract':
-                self.state_set('watching')
-            else:
-                self.state_set('done')
+            self.state_set('done')
+            # indexer is supposed to place it in done
 
     def save(self, *args, **kwargs):
         if not self.kind:

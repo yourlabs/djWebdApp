@@ -40,7 +40,10 @@ class EthereumProvider(Provider):
 
     @property
     def head(self):
-        return self.client.eth.block_number
+        """
+        Return the current block number.
+        """
+        return self.client.eth.get_block_number()
 
     def index_level(self, level):
         block = self.client.eth.get_block(level)
