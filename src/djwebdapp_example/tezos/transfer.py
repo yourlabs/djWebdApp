@@ -11,9 +11,11 @@ transaction = Transaction.objects.create(
 # Deploy the transaction now
 transaction.deploy()
 
-# Wait one block level
-transaction.blockchain.wait(transaction.level + 1)
+# Wait for confirmation blocks
+transaction.blockchain.wait()
 
+# Index the transaction
 blockchain.provider.index()
 
+# And refresh balance
 new_wallet.refresh_balance()
