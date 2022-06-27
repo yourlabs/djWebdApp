@@ -199,7 +199,7 @@ class TezosProvider(Provider):
         )
         url = f'{api}/v1/operations/transactions?'
         url += f'&target={urllib.parse.quote(target)}'
-        url += f'&level.le={self.head - 2}'
+        url += f'&level.le={self.head - 1}'
 
         contract, _ = self.transaction_class.objects.get_or_create(
             blockchain=self.blockchain,

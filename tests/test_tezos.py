@@ -147,7 +147,6 @@ def test_download(include, method):
         'client', 'load', 'deploy', 'blockchain',
     )
     blockchain = variables['blockchain']
-    blockchain.wait()
 
     # configure the blockchain object for .provider.download method
     blockchain.configuration['tzkt_url'] = 'http://tzkt-api:5000'
