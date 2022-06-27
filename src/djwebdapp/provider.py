@@ -1,9 +1,7 @@
 from multiprocessing import get_context
-import logging
 import random
 
 from django import db
-from django.conf import settings
 from django.db.models import Q
 
 from djwebdapp.models import Transaction

@@ -213,6 +213,7 @@ class Blockchain(models.Model):
         blocks = blocks or self.min_confirmations
         self.wait_level(self.provider.head + blocks)
 
+
 class Node(models.Model):
     """
     Blockchain node that we can use to query.
