@@ -353,10 +353,12 @@ class Transaction(models.Model):
     error = models.TextField(blank=True, null=True)
     history = models.JSONField(default=list)
     states = [i[0] for i in STATE_CHOICES]
-    amount = models.PositiveIntegerField(
+    amount = models.DecimalField(
+        max_digits=80,
         db_index=True,
-        null=True,
+        decimal_places=18,
         blank=True,
+        default=0,
     )
     args = PickledObjectField(
         default=None,
