@@ -22,30 +22,46 @@ def evil(path, *scripts, variables=None):
     """
     variables = variables if variables is not None else {}
 
+    def abspath(script):
+        return os.path.abspath(os.path.join(path, f'{script}.py'))
+
     path = os.path.join(
         os.path.dirname(__file__),
         'src',
         path,
     )
-    for script in scripts:
-        script_path = os.path.abspath(os.path.join(path, f'{script}.py'))
+    for number, script in enumerate(scripts, start=0):
+        script_path = abspath(script)
         with open(script_path) as f:
             source = f.read()
         try:
             exec(source, variables, variables)
         except:
             _, _, tb = sys.exc_info()
-            for name, value in variables.items():
-                if name.startswith('__'):
-                    continue
-                display = str(value).split('\n')[0][:100]
-                print(f'{name}={display}')
+            print('\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('EXCEPTION IN INCLUDE: START DUMP =====================')
+            if number:
+                print('Executed successfuly:')
+                for i in range(0, number):
+                    print(abspath(scripts[i]))
+                print('------------------------------------------------------')
+            print('FAILED:')
             if tb and tb.tb_next:
                 print(f'> {script_path}:{tb.tb_next.tb_lineno}')
                 print(source.split('\n')[tb.tb_next.tb_lineno - 1])
             else:
                 print(f'> {script_path}:?')
                 print(source)
+            print('------------------------------------------------------')
+            print('VARIABLES:')
+            for name, value in variables.items():
+                if name.startswith('__'):
+                    continue  # skip builtins
+                if name[0] == name.capitalize()[0]:
+                    continue  # skip classes
+                display = str(value).split('\n')[0][:100]
+                print(f'{name}={display}')
+            print('END DUMP =============================================')
             raise
     return variables
 
