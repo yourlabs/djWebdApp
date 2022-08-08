@@ -1,3 +1,4 @@
+from decimal import Decimal
 from multiprocessing import get_context
 import random
 
@@ -289,6 +290,12 @@ class Provider:
             call.deploy()
             return call
         self.logger.info('Found 0 call to retry')
+
+    def generate_secret_key(self):
+        return fakehash('addr').encode('utf8'), fakehash('key').encode('utf8')
+
+    def get_balance(self, address=None):
+        return Decimal(13333333333333337)
 
 
 def fakehash(leet):

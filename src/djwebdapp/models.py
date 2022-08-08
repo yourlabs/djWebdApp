@@ -6,13 +6,17 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Max, signals
+from django.db.models import Max, Q, signals
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from fernet_fields import EncryptedTextField
-from model_utils.managers import InheritanceManager
+from model_utils.managers import (
+    InheritanceManager,
+    InheritanceManagerMixin,
+    InheritanceQuerySetMixin,
+)
 
 from picklefield.fields import PickledObjectField
 
@@ -262,11 +266,29 @@ class Explorer(models.Model):
     )
 
 
+class TransactionQuerySet(InheritanceQuerySetMixin, models.QuerySet):
+    def for_user(self, user):
+        return self.filter(
+            Q(sender__owner=user)
+            | Q(receiver__owner=user)
+            | Q(users=user)
+        )
+
+
+class TransactionManager(InheritanceManagerMixin, models.Manager):
+    def get_queryset(self):
+        return TransactionQuerySet(self.model)
+
+
 class Transaction(models.Model):
     id = models.UUIDField(
         primary_key=True,
         editable=False,
         default=uuid.uuid4
+    )
+    users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
     )
     created_at = models.DateTimeField(
         null=True,
@@ -416,7 +438,7 @@ class Transaction(models.Model):
             ('transfer', 'Transfer'),
         )
     )
-    objects = InheritanceManager()
+    objects = TransactionManager()
 
     class Meta:
         unique_together = (
@@ -509,3 +531,39 @@ class Transaction(models.Model):
             self.blockchain_id = self.sender.blockchain_id
 
         return super().save(*args, **kwargs)
+
+
+class ContractManager(TransactionManager):
+    def get_queryset(self):
+        return super().get_queryset().filter(function=None, amount=None)
+
+
+class Contract(Transaction):
+    objects = ContractManager()
+
+    class Meta:
+        proxy = True
+
+
+class CallManager(TransactionManager):
+    def get_queryset(self):
+        return super().get_queryset().exclude(function=None)
+
+
+class Call(Transaction):
+    objects = CallManager()
+
+    class Meta:
+        proxy = True
+
+
+class TransferManager(TransactionManager):
+    def get_queryset(self):
+        return super().get_queryset().exclude(amount=None)
+
+
+class Transfer(Transaction):
+    objects = TransferManager()
+
+    class Meta:
+        proxy = True
