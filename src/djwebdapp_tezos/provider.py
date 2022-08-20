@@ -149,10 +149,16 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
         )
         call.function = call.metadata['parameters']['entrypoint']
-        internal_operations = OperationResult.from_transaction(call.metadata).operations
+        raw_tx = OperationResult.from_transaction(call.metadata)
+        internal_operations = raw_tx.operations
         for operation_content in internal_operations:
             if operation_content["kind"] == "transaction":
-                self.index_internal_transaction(level, op["hash"], operation_content, txgroup + 1)
+                self.index_internal_transaction(
+                    level,
+                    op["hash"],
+                    operation_content,
+                    txgroup + 1
+                )
                 txgroup += 1
         method = getattr(contract.interface, call.function)
         args = method.decode(call.metadata['parameters']['value'])
