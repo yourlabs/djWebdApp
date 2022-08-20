@@ -120,3 +120,73 @@ def test_download(include, method):
     assert call.function == 'mint'
     assert call.args['_to'] == 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'
     assert call.args['value'] == 1000
+
+
+def test_inter_contract_calls():
+    import json
+    from pytezos import pytezos
+    from pytezos import ContractInterface
+    from pytezos.contract.result import OperationResult
+    using_params = dict(
+        key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
+        shell='http://tzlocal:8732',
+    )
+
+    callee_micheline = json.load(open('src/djwebdapp_example/tezos/callee.json'))
+    caller_micheline = json.load(open('src/djwebdapp_example/tezos/caller.json'))
+
+    pytezos = pytezos.using(**using_params)
+
+    callee_ci = ContractInterface.from_micheline(callee_micheline).using(**using_params)
+    callee_init_storage = {
+        "counter": 0,
+        "price": 100,
+    }
+    opg = callee_ci.originate(initial_storage=callee_init_storage).send(min_confirmations=1)
+    callee_addr = OperationResult.from_operation_group(opg.opg_result)[
+        0
+    ].originated_contracts[0]
+    callee_ci = pytezos.using(**using_params).contract(callee_addr)
+
+    caller_ci = ContractInterface.from_micheline(caller_micheline).using(**using_params)
+    caller_init_storage = caller_ci.storage.dummy()
+    caller_init_storage["callee"] = callee_ci.address
+    opg = caller_ci.originate(initial_storage=caller_init_storage).send(min_confirmations=1)
+    caller_addr = OperationResult.from_operation_group(opg.opg_result)[
+        0
+    ].originated_contracts[0]
+    caller_ci = pytezos.using(**using_params).contract(caller_addr)
+
+    op = caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100).send(min_confirmations=1)
+    op = pytezos.bulk(
+        caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
+        caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
+    ).send(min_confirmations=1)
+
+    from djwebdapp.models import Blockchain
+    blockchain, _ = Blockchain.objects.get_or_create(
+        name='Tezos Local',
+        provider_class='djwebdapp_tezos.provider.TezosProvider',
+    )
+
+    # Add our node to the blockchain
+    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
+
+    from djwebdapp_tezos.models import TezosTransaction
+    caller = TezosTransaction.objects.create(
+        blockchain=blockchain,
+        address=caller_ci.address,
+    )
+
+    caller.blockchain.provider.index()
+
+    callee_set_counter = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").first()
+    caller_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter").first()
+
+    assert caller_set_counter.args == {"new_counter": 10, "price": 100}
+    #assert caller_set_counter.hash == op.hash()
+    assert caller_set_counter.txgroup == 0
+
+    assert callee_set_counter.args == 10
+    #assert callee_set_counter.hash == op.hash()
+    assert callee_set_counter.txgroup == 1
