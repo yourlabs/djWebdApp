@@ -122,6 +122,8 @@ def test_spool_call_parallel(include):
 
 @pytest.mark.django_db
 def test_docs(include, admin_smoketest):
+    import time
+    time.sleep(5)
     include(
         'djwebdapp_example/tezos',
         'client',
