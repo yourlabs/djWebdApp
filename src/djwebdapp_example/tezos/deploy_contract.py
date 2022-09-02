@@ -31,8 +31,8 @@ contract.refresh_from_db()
 # But won't deploy the mint call on the same block
 assert not blockchain.provider.spool()
 
-# Waiting for next block ...
-blockchain.wait(contract.level + 1)
+# Waiting for confirmation blocks ...
+blockchain.wait()
 
 # Index to fetch contract address
 blockchain.provider.index()
@@ -42,6 +42,5 @@ assert blockchain.provider.spool() == mint
 
 mint.refresh_from_db()
 
-blockchain.wait(mint.level + 1)
-
+blockchain.wait()
 blockchain.provider.index()

@@ -23,6 +23,7 @@ contract.refresh_from_db()
 # Gas cost was indexed
 assert contract.gas
 
+
 # Mint call was indexed
 call = contract.call_set.first()
 assert call.function == 'mint'
