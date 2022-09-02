@@ -84,3 +84,39 @@ def test_docs(include, admin_smoketest):
         'deploy_contract',
     )
     admin_smoketest()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('method', ('shell', 'python'))
+def test_download(include, method):
+    variables = include(
+        'djwebdapp_example/tezos',
+        'client', 'load', 'deploy', 'blockchain',
+    )
+    blockchain = variables['blockchain']
+    blockchain.wait(blockchain.provider.head + 2)
+
+    # configure the blockchain object for .provider.download method
+    blockchain.configuration['tzkt_url'] = 'http://tzkt-api:5000'
+    blockchain.save()
+
+    contract, _ = TezosTransaction.objects.get_or_create(
+        blockchain=variables['blockchain'],
+        address=variables['address'],
+    )
+
+    if method == 'python':
+        contract.provider.download(target=contract.address)
+    elif method == 'shell':
+        management.call_command(
+            'history_download',
+            blockchain.name,
+            contract.address,
+        )
+
+    call = contract.call_set.first()
+
+    assert call
+    assert call.function == 'mint'
+    assert call.args['_to'] == 'tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx'
+    assert call.args['value'] == 1000

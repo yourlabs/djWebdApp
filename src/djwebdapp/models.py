@@ -260,13 +260,21 @@ class Transaction(models.Model):
         'Blockchain',
         on_delete=models.CASCADE,
     )
+    level = models.PositiveIntegerField(
+        db_index=True,
+        null=True,
+        blank=True,
+    )
     hash = models.CharField(
         max_length=255,
         null=True,
         blank=True,
     )
-    txgroup = models.BigIntegerField(
-        default=0,
+    counter = models.PositiveIntegerField(
+        null=True,
+    )
+    nonce = models.PositiveIntegerField(
+        null=True,
     )
     gasprice = models.BigIntegerField(
         blank=True,
@@ -275,11 +283,6 @@ class Transaction(models.Model):
     gas = models.BigIntegerField(
         blank=True,
         null=True,
-    )
-    level = models.PositiveIntegerField(
-        db_index=True,
-        null=True,
-        blank=True,
     )
     last_fail = models.DateTimeField(
         null=True,
@@ -315,7 +318,7 @@ class Transaction(models.Model):
         max_length=200,
         db_index=True,
     )
-    error = models.TextField(blank=True)
+    error = models.TextField(blank=True, null=True)
     history = models.JSONField(default=list)
     states = [i[0] for i in STATE_CHOICES]
     amount = models.PositiveIntegerField(
@@ -378,14 +381,16 @@ class Transaction(models.Model):
             ('transfer', 'Transfer'),
         )
     )
-    error = models.TextField(
-        null=True,
-        blank=True,
-    )
     objects = InheritanceManager()
 
     class Meta:
-        unique_together = ('hash', 'txgroup',)
+        unique_together = (
+            'blockchain',
+            # 'level', ??
+            'hash',
+            'counter',
+            'nonce',
+        )
         ordering = ['-created_at']
 
     def __str__(self):
@@ -449,7 +454,7 @@ class Transaction(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.kind:
-            if not self.function and not self.receiver:
+            if not self.function and not self.receiver_id:
                 self.kind = 'contract'
             elif self.function:
                 self.kind = 'function'
