@@ -122,6 +122,7 @@ def test_download(include, method):
     assert call.args['value'] == 1000
 
 
+@pytest.mark.django_db
 def test_inter_contract_calls():
     import json
     from pytezos import pytezos
