@@ -1,6 +1,7 @@
 import pytest
 
 from django.core import management
+from djwebdapp.models import Blockchain
 from djwebdapp_tezos.models import TezosTransaction
 
 
@@ -164,7 +165,6 @@ def test_inter_contract_calls():
         caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
     ).send(min_confirmations=1)
 
-    from djwebdapp.models import Blockchain
     blockchain, _ = Blockchain.objects.get_or_create(
         name='Tezos Local',
         provider_class='djwebdapp_tezos.provider.TezosProvider',
@@ -183,11 +183,8 @@ def test_inter_contract_calls():
 
     callee_set_counter = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").first()
     caller_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter").first()
+    caller_callback_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter_callback").first()
 
     assert caller_set_counter.args == {"new_counter": 10, "price": 100}
-    #assert caller_set_counter.hash == op.hash()
-    assert caller_set_counter.txgroup == 0
 
     assert callee_set_counter.args == 10
-    #assert callee_set_counter.hash == op.hash()
-    assert callee_set_counter.txgroup == 1
