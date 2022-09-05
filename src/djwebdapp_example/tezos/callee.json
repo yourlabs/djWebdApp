@@ -351,11 +351,177 @@
                                 ]
                             },
                             {
+                                "prim": "SENDER"
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "1"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "CONTRACT",
+                                "args": [
+                                    {
+                                        "prim": "nat"
+                                    }
+                                ],
+                                "annots": [
+                                    "%set_counter_callback"
+                                ]
+                            },
+                            {
+                                "prim": "IF_NONE",
+                                "args": [
+                                    [
+                                        {
+                                            "prim": "PUSH",
+                                            "args": [
+                                                {
+                                                    "prim": "string"
+                                                },
+                                                {
+                                                    "string": "Contract does not exist"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "prim": "FAILWITH"
+                                        }
+                                    ],
+                                    []
+                                ]
+                            },
+                            {
                                 "prim": "DUP",
                                 "args": [
                                     {
                                         "int": "6"
                                     }
+                                ]
+                            },
+                            {
+                                "prim": "AMOUNT"
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "2"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "4"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "3"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "12"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "TRANSFER_TOKENS"
+                            },
+                            {
+                                "prim": "CONS"
+                            },
+                            {
+                                "prim": "DIP",
+                                "args": [
+                                    {
+                                        "int": "8"
+                                    },
+                                    [
+                                        {
+                                            "prim": "DROP"
+                                        }
+                                    ]
+                                ]
+                            },
+                            {
+                                "prim": "DUG",
+                                "args": [
+                                    {
+                                        "int": "7"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "DUP",
+                                "args": [
+                                    {
+                                        "int": "10"
+                                    }
+                                ]
+                            },
+                            {
+                                "prim": "DIP",
+                                "args": [
+                                    {
+                                        "int": "1"
+                                    },
+                                    [
+                                        {
+                                            "prim": "DROP"
+                                        }
+                                    ]
+                                ]
+                            },
+                            {
+                                "prim": "DIP",
+                                "args": [
+                                    {
+                                        "int": "1"
+                                    },
+                                    [
+                                        {
+                                            "prim": "DROP"
+                                        }
+                                    ]
+                                ]
+                            },
+                            {
+                                "prim": "DIP",
+                                "args": [
+                                    {
+                                        "int": "1"
+                                    },
+                                    [
+                                        {
+                                            "prim": "DROP"
+                                        }
+                                    ]
+                                ]
+                            },
+                            {
+                                "prim": "DIP",
+                                "args": [
+                                    {
+                                        "int": "1"
+                                    },
+                                    [
+                                        {
+                                            "prim": "DROP"
+                                        }
+                                    ]
                                 ]
                             },
                             {
