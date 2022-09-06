@@ -17,6 +17,7 @@ def test_normalize(include):
     ).send(min_confirmations=2)
 
     assert contract.fa12.balance_set.first().balance == 1000
+    contract.blockchain.wait()
     contract.blockchain.provider.index()
     assert contract.call_set.count() == 2
     assert contract.fa12.mint_set.count() == 2

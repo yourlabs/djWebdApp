@@ -1,2 +1,3 @@
-# let's wait one confirmation block
-transaction.blockchain.wait(1)
+# let's wait for the blockchain to have the min confirmation blocks
+# this will wait for last deployed transaction + blockchain.min_confirmations
+transaction.blockchain.wait()

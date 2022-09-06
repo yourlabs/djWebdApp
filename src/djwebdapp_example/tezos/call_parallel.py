@@ -7,7 +7,7 @@ mint_1 = TezosTransaction.objects.create(
     function='mint',
     args=(
         new_wallet.address,
-        1000,
+        20,
     ),
 )
 

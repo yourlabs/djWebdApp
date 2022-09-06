@@ -36,8 +36,7 @@ class TezosProvider(Provider):
 
     @property
     def head(self):
-        return self.client.shell.head.metadata(
-            )['level_info']['level']
+        return self.client.shell.head.metadata()['level_info']['level']
 
     def get_address(self):
         return self.client.key.public_key_hash()
@@ -212,10 +211,10 @@ class TezosProvider(Provider):
         self.write_transaction(tx, transaction)
 
     def write_transaction(self, tx, transaction):
-        transaction.level = self.head
         origination = tx.inject(
             _async=False,
         )
+        transaction.level = self.head + 1  # it'll be in the next block
         transaction.gas = origination['contents'][0]['fee']
         transaction.hash = origination['hash']
         transaction.save()
@@ -242,7 +241,7 @@ class TezosProvider(Provider):
         )
         url = f'{api}/v1/operations/transactions?'
         url += f'&target={urllib.parse.quote(target)}'
-        url += f'&level.le={self.head - 2}'
+        url += f'&level.le={self.head - 1}'
 
         contract, _ = self.transaction_class.objects.get_or_create(
             blockchain=self.blockchain,
@@ -291,7 +290,7 @@ class TezosProvider(Provider):
             (call.level, call.hash, call.counter, call.nonce): call
             for call in self.transaction_class.objects.filter(
                 contract=contract,
-                state='done',
+                state__in=('confirm', 'done'),
             )
         }
 
@@ -343,9 +342,8 @@ class TezosProvider(Provider):
                 args=args,
                 metadata=operation,
                 gas=operation['gasUsed'],
-                state='done',
             )
-            call.save()
+            call.state_set('done')
 
         # reconnect Account signal
         signals.pre_save.connect(setup, sender=Account)
