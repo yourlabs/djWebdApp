@@ -216,7 +216,7 @@ def cross_contract_call_factory():
 def test_inter_contract_calls():
     caller_ci, callee_ci = cross_contract_call_factory()
 
-    op = caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100).send(min_confirmations=1)
+    op = caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100).send(min_confirmations=2)
 
     blockchain, _ = Blockchain.objects.get_or_create(
         name='Tezos Local',
@@ -263,7 +263,7 @@ def test_inter_contract_calls_bulk():
     op = pytezos.using(**using_params).bulk(
         caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
         caller_ci.set_counter({"new_counter": 20, "price": 100}).with_amount(100),
-    ).send(min_confirmations=1)
+    ).send(min_confirmations=2)
 
     blockchain, _ = Blockchain.objects.get_or_create(
         name='Tezos Local',
