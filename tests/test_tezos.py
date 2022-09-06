@@ -1,8 +1,13 @@
+import json
 import pytest
 
 from django.core import management
 from djwebdapp.models import Blockchain
 from djwebdapp_tezos.models import TezosTransaction
+
+from pytezos import pytezos
+from pytezos import ContractInterface
+from pytezos.contract.result import OperationResult
 
 
 @pytest.mark.django_db
@@ -123,12 +128,7 @@ def test_download(include, method):
     assert call.args['value'] == 1000
 
 
-@pytest.mark.django_db
-def test_inter_contract_calls():
-    import json
-    from pytezos import pytezos
-    from pytezos import ContractInterface
-    from pytezos.contract.result import OperationResult
+def cross_contract_call_factory():
     using_params = dict(
         key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
         shell='http://tzlocal:8732',
@@ -136,8 +136,6 @@ def test_inter_contract_calls():
 
     callee_micheline = json.load(open('src/djwebdapp_example/tezos/callee.json'))
     caller_micheline = json.load(open('src/djwebdapp_example/tezos/caller.json'))
-
-    pytezos = pytezos.using(**using_params)
 
     callee_ci = ContractInterface.from_micheline(callee_micheline).using(**using_params)
     callee_init_storage = {
@@ -159,10 +157,60 @@ def test_inter_contract_calls():
     ].originated_contracts[0]
     caller_ci = pytezos.using(**using_params).contract(caller_addr)
 
+    return caller_ci, callee_ci
+
+
+@pytest.mark.django_db
+def test_inter_contract_calls():
+    caller_ci, callee_ci = cross_contract_call_factory()
+
     op = caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100).send(min_confirmations=1)
-    op = pytezos.bulk(
+
+    blockchain, _ = Blockchain.objects.get_or_create(
+        name='Tezos Local',
+        provider_class='djwebdapp_tezos.provider.TezosProvider',
+    )
+
+    # Add our node to the blockchain
+    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
+
+    caller = TezosTransaction.objects.create(
+        blockchain=blockchain,
+        address=caller_ci.address,
+    )
+
+    caller.blockchain.provider.index()
+
+    caller_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter").first()
+    callee_set_counter = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").first()
+    caller_callback_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter_callback").first()
+
+    assert caller_set_counter.nonce == None
+    assert callee_set_counter.nonce == 0
+    assert caller_callback_set_counter.nonce == 1
+
+    assert caller_set_counter.args == {"new_counter": 10, "price": 100}
+    assert callee_set_counter.args == 10
+    assert caller_callback_set_counter.args == 10
+
+    assert caller_set_counter.amount == 100
+    assert callee_set_counter.amount == 100
+    assert caller_callback_set_counter.amount == 100
+
+    assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash
+
+
+@pytest.mark.django_db
+def test_inter_contract_calls_bulk():
+    caller_ci, callee_ci = cross_contract_call_factory()
+
+    using_params = dict(
+        key='edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh',
+        shell='http://tzlocal:8732',
+    )
+    op = pytezos.using(**using_params).bulk(
         caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
-        caller_ci.set_counter({"new_counter": 10, "price": 100}).with_amount(100),
+        caller_ci.set_counter({"new_counter": 20, "price": 100}).with_amount(100),
     ).send(min_confirmations=1)
 
     blockchain, _ = Blockchain.objects.get_or_create(
@@ -173,7 +221,6 @@ def test_inter_contract_calls():
     # Add our node to the blockchain
     blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
 
-    from djwebdapp_tezos.models import TezosTransaction
     caller = TezosTransaction.objects.create(
         blockchain=blockchain,
         address=caller_ci.address,
@@ -181,10 +228,43 @@ def test_inter_contract_calls():
 
     caller.blockchain.provider.index()
 
-    callee_set_counter = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").first()
-    caller_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter").first()
-    caller_callback_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter_callback").first()
+    caller_set_counter_qs = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter").order_by("created_at")
+    callee_set_counter_qs = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").order_by("created_at")
+    caller_callback_set_counter_qs = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter_callback").order_by("created_at")
+
+    caller_set_counter = caller_set_counter_qs.first()
+    callee_set_counter = callee_set_counter_qs.first()
+    caller_callback_set_counter = caller_callback_set_counter_qs.first()
+
+    hash = caller_set_counter.hash
+    assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash
+
+    assert caller_set_counter.nonce == None
+    assert callee_set_counter.nonce == 0
+    assert caller_callback_set_counter.nonce == 1
 
     assert caller_set_counter.args == {"new_counter": 10, "price": 100}
-
     assert callee_set_counter.args == 10
+    assert caller_callback_set_counter.args == 10
+
+    assert caller_set_counter.amount == 100
+    assert callee_set_counter.amount == 100
+    assert caller_callback_set_counter.amount == 100
+
+    caller_set_counter = caller_set_counter_qs.last()
+    callee_set_counter = callee_set_counter_qs.last()
+    caller_callback_set_counter = caller_callback_set_counter_qs.last()
+
+    assert caller_set_counter.nonce == None
+    assert callee_set_counter.nonce == 2
+    assert caller_callback_set_counter.nonce == 3
+
+    assert caller_set_counter.args == {"new_counter": 20, "price": 100}
+    assert callee_set_counter.args == 20
+    assert caller_callback_set_counter.args == 20
+
+    assert caller_set_counter.amount == 100
+    assert callee_set_counter.amount == 100
+    assert caller_callback_set_counter.amount == 100
+
+    assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash == hash

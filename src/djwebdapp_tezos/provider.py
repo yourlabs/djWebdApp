@@ -103,7 +103,8 @@ class TezosProvider(Provider):
                 hash=hash,
                 contract=destination_contract,
                 blockchain=self.blockchain,
-                nonce=content.get("nonce", None)
+                nonce=content.get("nonce", None),
+                amount=int(content.get("amount", 0)),
             )
         call.metadata = content
         call.level = level
@@ -130,10 +131,14 @@ class TezosProvider(Provider):
             nonce=content.get('nonce', None),
         ).first()
 
+        operations = [op for op in OperationResult.iter_contents(content)]
+        external_operation = operations[0]
+        internal_operations = operations[1:]
         if not call:
             call = self.transaction_class(
                 hash=op['hash'],
                 counter=content['counter'],
+                amount=int(external_operation.get('amount', 0)),
                 level=level,
                 nonce=content.get('nonce', None),
                 contract=contract,
@@ -148,8 +153,6 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
         )
         call.function = call.metadata['parameters']['entrypoint']
-        raw_tx = OperationResult.from_transaction(call.metadata)
-        internal_operations = raw_tx.operations
         for operation_content in internal_operations:
             if operation_content["kind"] == "transaction":
                 self.index_internal_transaction(
