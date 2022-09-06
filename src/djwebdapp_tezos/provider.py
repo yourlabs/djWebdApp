@@ -5,6 +5,7 @@ import urllib
 
 from django.db.models import Q, signals
 from django.core.exceptions import ValidationError
+from pytezos.operation.result import OperationResult
 
 from djwebdapp.exceptions import PermanentError
 from djwebdapp.models import Account, setup
@@ -50,7 +51,7 @@ class TezosProvider(Provider):
         for ops in block.operations():
             for op in ops:
                 hash = op['hash']
-                for txgroup, content in enumerate(op.get('contents', [])):
+                for content in op.get('contents', []):
                     if content['kind'] == 'origination':
                         if 'metadata' not in content:
                             continue
@@ -87,6 +88,35 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
+    def index_internal_transaction(self, level, hash, content):
+        destination_contract, _ = self.transaction_class.objects.get_or_create(
+            blockchain=self.blockchain,
+            address=content['destination'],
+        )
+        call = destination_contract.call_set.select_subclasses().filter(
+            hash=hash,
+            nonce=content.get("nonce", None)
+        ).first()
+        if not call:
+            call = self.transaction_class(
+                hash=hash,
+                contract=destination_contract,
+                blockchain=self.blockchain,
+                nonce=content.get("nonce", None),
+                amount=int(content.get("amount", 0)),
+            )
+        call.metadata = content
+        call.level = level
+        call.sender, _ = Account.objects.get_or_create(
+            address=content['source'],
+            blockchain=self.blockchain,
+        )
+        call.function = content['parameters']['entrypoint']
+        method = getattr(destination_contract.interface, call.function)
+        args = method.decode(call.metadata['parameters']['value'])
+        call.args = args[call.function]
+        call.state_set('done')
+
     def index_call(self, level, op, content):
         self.logger.info(f'Syncing transaction {op["hash"]}')
         contract = self.transaction_class.objects.get(
@@ -100,10 +130,14 @@ class TezosProvider(Provider):
             nonce=content.get('nonce', None),
         ).first()
 
+        operations = [op for op in OperationResult.iter_contents(content)]
+        external_operation = operations[0]
+        internal_operations = operations[1:]
         if not call:
             call = self.transaction_class(
                 hash=op['hash'],
                 counter=content['counter'],
+                amount=int(external_operation.get('amount', 0)),
                 level=level,
                 nonce=content.get('nonce', None),
                 contract=contract,
@@ -118,10 +152,18 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
         )
         call.function = call.metadata['parameters']['entrypoint']
+        for operation_content in internal_operations:
+            if operation_content["kind"] == "transaction":
+                self.index_internal_transaction(
+                    level,
+                    op["hash"],
+                    operation_content,
+                )
         method = getattr(contract.interface, call.function)
         args = method.decode(call.metadata['parameters']['value'])
         call.args = args[call.function]
         call.state_set('done')
+        return call
 
     def transfer(self, transaction):
         """
