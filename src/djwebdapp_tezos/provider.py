@@ -256,6 +256,8 @@ class TezosProvider(Provider):
         method = getattr(ci, transaction.function)
         try:
             tx = method(*self.get_args(transaction))
+            if transaction.amount:
+                tx = tx.with_amount(transaction.amount)
         except ValueError as e:
             raise PermanentError(*e.args)
         self.write_transaction(tx, transaction)

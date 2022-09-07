@@ -11,6 +11,7 @@ from pytezos import ContractInterface
 from pytezos.contract.result import OperationResult
 from pymich.test import ContractLoader
 
+
 @pytest.mark.django_db
 def test_internal(client, blockchain, using):
     loader = ContractLoader.factory('proxy/A.py')
