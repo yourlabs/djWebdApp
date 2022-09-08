@@ -88,14 +88,16 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
-    def index_internal_transaction(self, level, hash, content):
+    def index_internal_transaction(self, level, hash, content, caller=None):
         destination_contract, _ = self.transaction_class.objects.get_or_create(
             blockchain=self.blockchain,
             address=content['destination'],
         )
         call = destination_contract.call_set.select_subclasses().filter(
             hash=hash,
-            nonce=content.get("nonce", None)
+            nonce=content.get("nonce", None),
+            counter=content.get('counter', None),
+            level=level,
         ).first()
         if not call:
             call = self.transaction_class(
@@ -106,6 +108,7 @@ class TezosProvider(Provider):
                 nonce=content.get("nonce", None),
                 amount=int(content.get("amount", 0)),
                 state="held",
+                caller=caller,
             )
         call.metadata = content
         call.level = level
@@ -122,20 +125,11 @@ class TezosProvider(Provider):
 
     def index_call(self, level, op, content):
         self.logger.info(f'Syncing transaction {op["hash"]}')
-        contract = self.transaction_class.objects.get(
-            blockchain=self.blockchain,
-            address=content['destination'],
-        )
-        call = contract.call_set.select_subclasses().filter(
-            hash=op['hash'],
-            counter=content['counter'],
-            level=level,
-            nonce=content.get('nonce', None),
-        ).first()
 
         operations = [op for op in OperationResult.iter_contents(content)]
-        external_operation = operations[0]
         internal_operations = operations[1:]
+
+        source = self.index_internal_transaction(level, op["hash"], content)
 
         internal_transactions = []
         for operation_content in internal_operations:
@@ -144,13 +138,19 @@ class TezosProvider(Provider):
                     level,
                     op["hash"],
                     operation_content,
+                    source,
                 )
                 internal_transactions.append(internal_transaction)
 
-        call = self.index_internal_transaction(level, op["hash"], content)
-        call.state_set('done')
+        # save all calls
+        source.state_set('held')
+        [tx.state_set('held') for tx in internal_transactions]
+        # call indexing signals starting with the external call
+        source.state_set('done')
+        # call indexing signals for internal tx in execution order
         [tx.state_set('done') for tx in internal_transactions]
-        return call
+
+        return source
 
     def transfer(self, transaction):
         """

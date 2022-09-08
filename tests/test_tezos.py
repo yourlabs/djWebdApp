@@ -251,6 +251,11 @@ def test_inter_contract_calls():
 
     assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash
 
+    caller_set_counter.internal_calls
+    assert caller_set_counter.internal_calls.first() == callee_set_counter
+    assert callee_set_counter.internal_calls.first() == caller_callback_set_counter
+    assert caller_callback_set_counter.internal_calls.first() == None
+
 
 @pytest.mark.django_db
 def test_inter_contract_calls_bulk():
