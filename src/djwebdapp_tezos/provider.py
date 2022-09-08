@@ -100,10 +100,12 @@ class TezosProvider(Provider):
         if not call:
             call = self.transaction_class(
                 hash=hash,
+                counter=content.get('counter', None),
                 contract=destination_contract,
                 blockchain=self.blockchain,
                 nonce=content.get("nonce", None),
                 amount=int(content.get("amount", 0)),
+                state="held",
             )
         call.metadata = content
         call.level = level
@@ -115,7 +117,8 @@ class TezosProvider(Provider):
         method = getattr(destination_contract.interface, call.function)
         args = method.decode(call.metadata['parameters']['value'])
         call.args = args[call.function]
-        call.state_set('done')
+
+        return call
 
     def index_call(self, level, op, content):
         self.logger.info(f'Syncing transaction {op["hash"]}')
@@ -133,36 +136,20 @@ class TezosProvider(Provider):
         operations = [op for op in OperationResult.iter_contents(content)]
         external_operation = operations[0]
         internal_operations = operations[1:]
-        if not call:
-            call = self.transaction_class(
-                hash=op['hash'],
-                counter=content['counter'],
-                amount=int(external_operation.get('amount', 0)),
-                level=level,
-                nonce=content.get('nonce', None),
-                contract=contract,
-                blockchain=self.blockchain,
-            )
 
-        call.metadata = content
-        call.gas = content['fee']
-        call.level = level
-        call.sender, _ = Account.objects.get_or_create(
-            address=content['source'],
-            blockchain=self.blockchain,
-        )
-        call.function = call.metadata['parameters']['entrypoint']
+        internal_transactions = []
         for operation_content in internal_operations:
             if operation_content["kind"] == "transaction":
-                self.index_internal_transaction(
+                internal_transaction = self.index_internal_transaction(
                     level,
                     op["hash"],
                     operation_content,
                 )
-        method = getattr(contract.interface, call.function)
-        args = method.decode(call.metadata['parameters']['value'])
-        call.args = args[call.function]
+                internal_transactions.append(internal_transaction)
+
+        call = self.index_internal_transaction(level, op["hash"], content)
         call.state_set('done')
+        [tx.state_set('done') for tx in internal_transactions]
         return call
 
     def transfer(self, transaction):
