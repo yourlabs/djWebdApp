@@ -88,12 +88,14 @@ class Provider:
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
         self.contracts = self.transaction_class.objects.filter(
-            Q(state='confirm') | ~Q(address=None),
+            blockchain=self.blockchain,
+            index=True,
             kind='contract',
         ).filter(
-            blockchain=self.blockchain,
+            Q(state='confirm') | ~Q(address=None),
+        ).filter(
         )
-        self.logger.info(f'Found {len(self.contracts)} contracts to index')
+        print(f'Found {len(self.contracts)} contracts to index')
 
         self.addresses = self.contracts.values_list(
             'address',

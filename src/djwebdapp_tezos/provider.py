@@ -89,33 +89,50 @@ class TezosProvider(Provider):
         contract.state_set('done')
 
     def index_internal_transaction(self, level, hash, content, caller=None):
-        destination_contract, _ = self.transaction_class.objects.get_or_create(
+        self.logger.info(f'Syncing internal call {hash}')
+        destination_contract = self.transaction_class.objects.filter(
             blockchain=self.blockchain,
             address=content['destination'],
-        )
+        ).first()
+        if not destination_contract:
+            destination_contract = self.transaction_class.objects.create(
+                blockchain=self.blockchain,
+                address=content['destination'],
+                index=False,
+            )
+        if caller:
+            counter = caller.counter
+        else:
+            counter = content.get('counter', None)
         call = destination_contract.call_set.select_subclasses().filter(
             hash=hash,
-            nonce=content.get("nonce", None),
-            counter=content.get('counter', None),
+            nonce=content.get("nonce", -1),
+            counter=counter,
             level=level,
         ).first()
         if not call:
             call = self.transaction_class(
                 hash=hash,
-                counter=content.get('counter', None),
+                counter=counter,
                 contract=destination_contract,
                 blockchain=self.blockchain,
-                nonce=content.get("nonce", None),
+                nonce=content.get("nonce", -1),
                 amount=int(content.get("amount", 0)),
                 state="held",
                 caller=caller,
             )
         call.metadata = content
         call.level = level
-        call.sender, _ = Account.objects.get_or_create(
+        call.sender = Account.objects.filter(
             address=content['source'],
             blockchain=self.blockchain,
-        )
+        ).first()
+        if not call.sender:
+            call.sender = Account.objects.create(
+                address=content['source'],
+                blockchain=self.blockchain,
+                index=False,
+            )
         call.function = content['parameters']['entrypoint']
         method = getattr(destination_contract.interface, call.function)
         args = method.decode(call.metadata['parameters']['value'])
@@ -290,7 +307,7 @@ class TezosProvider(Provider):
                 hash,
                 f'level={level}',
                 f'counter={counter}',
-                f'nonce={nonce}',
+                f'nonce={nonce if isinstance(nonce, int) else -1}',
             )))
 
             if key in calls:
@@ -323,7 +340,7 @@ class TezosProvider(Provider):
                 level=level,
                 hash=hash,
                 counter=counter,
-                nonce=nonce if nonce else None,
+                nonce=nonce if isinstance(nonce, int) else -1,
                 kind='call',
                 function=function,
                 args=args,
