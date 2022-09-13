@@ -88,33 +88,55 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
+    def is_implicit_contract(self, address):
+        return len(address) == 36 and address[:2] == "tz"
+
     def index_internal_transaction(self, level, hash, content, caller=None):
         self.logger.info(f'Syncing internal call {hash}')
+        destination_address = content['destination']
         destination_contract = self.transaction_class.objects.filter(
             blockchain=self.blockchain,
-            address=content['destination'],
+            address=destination_address,
         ).first()
-        if not destination_contract:
+        if (
+                not destination_contract
+                and not self.is_implicit_contract(destination_address)
+                ):
             destination_contract = self.transaction_class.objects.create(
                 blockchain=self.blockchain,
-                address=content['destination'],
+                address=destination_address,
                 index=False,
+            )
+        receiver = None
+        if self.is_implicit_contract(destination_address):
+            receiver, _ = Account.objects.get_or_create(
+                blockchain=self.blockchain,
+                address=destination_address,
             )
         if caller:
             counter = caller.counter
         else:
             counter = content.get('counter', None)
-        call = destination_contract.call_set.select_subclasses().filter(
+        if destination_contract:
+            call_reverse_manager = \
+                destination_contract.call_set.select_subclasses()
+        else:
+            call_reverse_manager = receiver.transaction_received
+        call = call_reverse_manager.filter(
             hash=hash,
             nonce=content.get("nonce", -1),
             counter=counter,
             level=level,
         ).first()
+        contract = None
+        if not self.is_implicit_contract(destination_address):
+            contract = destination_contract
         if not call:
             call = self.transaction_class(
                 hash=hash,
                 counter=counter,
-                contract=destination_contract,
+                contract=contract,
+                receiver=receiver,
                 blockchain=self.blockchain,
                 nonce=content.get("nonce", -1),
                 amount=int(content.get("amount", 0)),
@@ -133,10 +155,13 @@ class TezosProvider(Provider):
                 blockchain=self.blockchain,
                 index=False,
             )
-        call.function = content['parameters']['entrypoint']
-        method = getattr(destination_contract.interface, call.function)
-        args = method.decode(call.metadata['parameters']['value'])
-        call.args = args[call.function]
+        if 'parameters' in content:
+            call.function = content['parameters']['entrypoint']
+            method = getattr(destination_contract.interface, call.function)
+            args = method.decode(call.metadata['parameters']['value'])
+            call.args = args[call.function]
+
+        call.save()
 
         return call
 
