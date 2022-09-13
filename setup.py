@@ -42,6 +42,7 @@ setup(
         'django-model-utils',
         'djfernet>=0.8.1',
         'django-picklefield>=3.0.1',
+        'pymich>=0.9.5',
     ],
     extras_require=extras_require,
     author='James Pic',
