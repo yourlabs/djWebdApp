@@ -113,8 +113,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-import os
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
