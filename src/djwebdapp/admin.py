@@ -42,7 +42,7 @@ class BlockchainAdmin(admin.ModelAdmin):
         'name',
         'is_active',
         'min_level',
-        'max_level',
+        'index_level',
     )
     list_filter = (
         'is_active',
