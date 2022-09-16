@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pymich.michelson_types import Address, BaseContract, Contract, Mutez, Tezos, String
+from pymich.michelson_types import Address, BaseContract, Contract, Mutez, Tezos, String, Unit
 
 
 #   A<--|
@@ -14,6 +14,7 @@ class A(BaseContract):
     B: Address
     C: Address
     value: String
+    admin: Address
 
     def call_B_and_C(self, value_b: String, value_c: String):
         enter_b_entrypoint = Contract[String](self.B, "%set_value_B")
@@ -33,8 +34,13 @@ class A(BaseContract):
         enter_b_entrypoint = Contract[String](self.B, "%set_value")
         self.ops = self.ops.push(
             enter_b_entrypoint,
-            Tezos.amount,
+            Mutez(0),
             value_b,
+        )
+        self.ops = self.ops.push(
+            Contract[Unit](self.admin),
+            Tezos.amount,
+            Unit(),
         )
 
     def set_value_C(self, value_c: String):

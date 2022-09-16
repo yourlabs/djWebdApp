@@ -77,6 +77,7 @@ def test_internal(client, blockchain, using):
     loader = ContractLoader('src/djwebdapp_example/tezos/A.py')
     loader.storage['B'] = client.key.public_key_hash()
     loader.storage['C'] = loader.storage['B']
+    loader.storage['admin'] = client.key.public_key_hash()
     A = loader.deploy(client, using)
     caller = TezosTransaction.objects.create(
         blockchain=blockchain,
@@ -94,25 +95,26 @@ def test_internal(client, blockchain, using):
     opg5 = A.call_B_and_C(dict(
         value_b='B',
         value_c='C',
-    )).send(min_confirmations=1)
+    )).with_amount(1_000).send(min_confirmations=1)
     caller.blockchain.wait_blocks()
     caller.blockchain.provider.index()
     result = TezosTransaction.objects.values_list(
-        'function', 'args', 'index', 'address',
+        'function', 'args', 'amount', 'index', 'address'
     ).order_by(
         'level', 'counter', 'nonce'
     )
     expected = [
-        (None, None, False, C.address),
-        (None, None, False, B.address),
-        (None, None, False, D.address),
-        (None, None, True, A.address),
-        ('set_B', B.address, True, None),
-        ('set_C', C.address, True, None),
-        ('call_B_and_C', {'value_b': 'B', 'value_c': 'C'}, True, None),
-        ('set_value_B', 'B', True, None),
-        ('set_value_C', 'C', True, None),
-        ('set_value', 'C', True, None),
-        ('set_value', 'B', True, None),
+        (None, None, 0, False, C.address),
+        (None, None, 0, False, B.address),
+        (None, None, 0, False, D.address),
+        (None, None, 0, True, A.address),
+        ('set_B', B.address, 0, True, None),
+        ('set_C', C.address, 0, True, None),
+        ('call_B_and_C', {'value_b': 'B', 'value_c': 'C'}, 1_000, True, None),
+        ('set_value_B', 'B', 1_000, True, None),
+        ('set_value_C', 'C', 0, True, None),
+        ('set_value', 'C', 0, True, None),
+        ('set_value', 'B', 0, True, None),
+        (None, None, 1_000, True, None),
     ]
     assert list(result) == expected
