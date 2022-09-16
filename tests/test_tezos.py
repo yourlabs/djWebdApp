@@ -237,7 +237,7 @@ def test_inter_contract_calls():
     callee_set_counter = TezosTransaction.objects.filter(contract__address=callee_ci.address, function="set_counter").first()
     caller_callback_set_counter = TezosTransaction.objects.filter(contract__address=caller_ci.address, function="set_counter_callback").first()
 
-    assert caller_set_counter.nonce == None
+    assert caller_set_counter.nonce == -1
     assert callee_set_counter.nonce == 0
     assert caller_callback_set_counter.nonce == 1
 
@@ -250,6 +250,11 @@ def test_inter_contract_calls():
     assert caller_callback_set_counter.amount == 100
 
     assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash
+
+    caller_set_counter.internal_calls
+    assert caller_set_counter.internal_calls.first() == callee_set_counter
+    assert callee_set_counter.internal_calls.first() == caller_callback_set_counter
+    assert caller_callback_set_counter.internal_calls.first() == None
 
 
 @pytest.mark.django_db
@@ -291,7 +296,7 @@ def test_inter_contract_calls_bulk():
     hash = caller_set_counter.hash
     assert caller_set_counter.hash == callee_set_counter.hash == caller_callback_set_counter.hash
 
-    assert caller_set_counter.nonce == None
+    assert caller_set_counter.nonce == -1
     assert callee_set_counter.nonce == 0
     assert caller_callback_set_counter.nonce == 1
 
@@ -307,7 +312,7 @@ def test_inter_contract_calls_bulk():
     callee_set_counter = callee_set_counter_qs.last()
     caller_callback_set_counter = caller_callback_set_counter_qs.last()
 
-    assert caller_set_counter.nonce == None
+    assert caller_set_counter.nonce == -1
     assert callee_set_counter.nonce == 2
     assert caller_callback_set_counter.nonce == 3
 

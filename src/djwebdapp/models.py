@@ -81,6 +81,10 @@ class Account(models.Model):
     revealed = models.BooleanField(default=False)
     counter = models.PositiveIntegerField(null=True)
     last_level = models.PositiveIntegerField(null=True)
+    index = models.BooleanField(
+        default=True,
+        help_text='Wether the indexer should index all transactions or not',
+    )
 
     objects = InheritanceManager()
 
@@ -306,8 +310,8 @@ class Transaction(models.Model):
     counter = models.PositiveIntegerField(
         null=True,
     )
-    nonce = models.PositiveIntegerField(
-        null=True,
+    nonce = models.IntegerField(
+        default=-1,
     )
     gasprice = models.BigIntegerField(
         blank=True,
@@ -415,6 +419,10 @@ class Transaction(models.Model):
             ('function', 'Function call'),
             ('transfer', 'Transfer'),
         )
+    )
+    index = models.BooleanField(
+        default=True,
+        help_text='Wether the indexer should index all transactions or not',
     )
     objects = InheritanceManager()
 

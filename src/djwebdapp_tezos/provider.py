@@ -88,82 +88,111 @@ class TezosProvider(Provider):
         )
         contract.state_set('done')
 
-    def index_internal_transaction(self, level, hash, content):
-        destination_contract, _ = self.transaction_class.objects.get_or_create(
+    def is_implicit_contract(self, address):
+        return len(address) == 36 and address[:2] == "tz"
+
+    def index_internal_transaction(self, level, hash, content, caller=None):
+        self.logger.info(f'Syncing internal call {hash}')
+        destination_address = content['destination']
+        destination_contract = self.transaction_class.objects.filter(
             blockchain=self.blockchain,
-            address=content['destination'],
-        )
-        call = destination_contract.call_set.select_subclasses().filter(
-            hash=hash,
-            nonce=content.get("nonce", None)
+            address=destination_address,
         ).first()
+        if (
+                not destination_contract
+                and not self.is_implicit_contract(destination_address)
+                ):
+            destination_contract = self.transaction_class.objects.create(
+                blockchain=self.blockchain,
+                address=destination_address,
+                index=False,
+            )
+        receiver = None
+        if self.is_implicit_contract(destination_address):
+            receiver, _ = Account.objects.get_or_create(
+                blockchain=self.blockchain,
+                address=destination_address,
+            )
+        if caller:
+            counter = caller.counter
+        else:
+            counter = content.get('counter', None)
+        if destination_contract:
+            call_reverse_manager = \
+                destination_contract.call_set.select_subclasses()
+        else:
+            call_reverse_manager = receiver.transaction_received
+        call = call_reverse_manager.filter(
+            hash=hash,
+            nonce=content.get("nonce", -1),
+            counter=counter,
+            level=level,
+        ).first()
+        contract = None
+        if not self.is_implicit_contract(destination_address):
+            contract = destination_contract
         if not call:
             call = self.transaction_class(
                 hash=hash,
-                contract=destination_contract,
+                counter=counter,
+                contract=contract,
+                receiver=receiver,
                 blockchain=self.blockchain,
-                nonce=content.get("nonce", None),
+                nonce=content.get("nonce", -1),
                 amount=int(content.get("amount", 0)),
+                state="held",
+                caller=caller,
             )
         call.metadata = content
         call.level = level
-        call.sender, _ = Account.objects.get_or_create(
+        call.sender = Account.objects.filter(
             address=content['source'],
             blockchain=self.blockchain,
-        )
-        call.function = content['parameters']['entrypoint']
-        method = getattr(destination_contract.interface, call.function)
-        args = method.decode(call.metadata['parameters']['value'])
-        call.args = args[call.function]
-        call.state_set('done')
+        ).first()
+        if not call.sender:
+            call.sender = Account.objects.create(
+                address=content['source'],
+                blockchain=self.blockchain,
+                index=False,
+            )
+        if 'parameters' in content:
+            call.function = content['parameters']['entrypoint']
+            method = getattr(destination_contract.interface, call.function)
+            args = method.decode(call.metadata['parameters']['value'])
+            call.args = args[call.function]
+
+        call.save()
+
+        return call
 
     def index_call(self, level, op, content):
         self.logger.info(f'Syncing transaction {op["hash"]}')
-        contract = self.transaction_class.objects.get(
-            blockchain=self.blockchain,
-            address=content['destination'],
-        )
-        call = contract.call_set.select_subclasses().filter(
-            hash=op['hash'],
-            counter=content['counter'],
-            level=level,
-            nonce=content.get('nonce', None),
-        ).first()
 
         operations = [op for op in OperationResult.iter_contents(content)]
-        external_operation = operations[0]
         internal_operations = operations[1:]
-        if not call:
-            call = self.transaction_class(
-                hash=op['hash'],
-                counter=content['counter'],
-                amount=int(external_operation.get('amount', 0)),
-                level=level,
-                nonce=content.get('nonce', None),
-                contract=contract,
-                blockchain=self.blockchain,
-            )
 
-        call.metadata = content
-        call.gas = content['fee']
-        call.level = level
-        call.sender, _ = Account.objects.get_or_create(
-            address=content['source'],
-            blockchain=self.blockchain,
-        )
-        call.function = call.metadata['parameters']['entrypoint']
+        source = self.index_internal_transaction(level, op["hash"], content)
+
+        internal_transactions = []
         for operation_content in internal_operations:
             if operation_content["kind"] == "transaction":
-                self.index_internal_transaction(
+                internal_transaction = self.index_internal_transaction(
                     level,
                     op["hash"],
                     operation_content,
+                    source,
                 )
-        method = getattr(contract.interface, call.function)
-        args = method.decode(call.metadata['parameters']['value'])
-        call.args = args[call.function]
-        call.state_set('done')
-        return call
+                internal_transactions.append(internal_transaction)
+
+        # save all calls
+        source.state_set('held')
+        [tx.state_set('held') for tx in internal_transactions]
+        # call indexing signals starting with the external call
+        source.state_set('done')
+        # call indexing signals for internal tx in execution order
+        [tx.state_set('done') for tx in internal_transactions]
+
+        return source
 
     def transfer(self, transaction):
         """
@@ -303,7 +332,7 @@ class TezosProvider(Provider):
                 hash,
                 f'level={level}',
                 f'counter={counter}',
-                f'nonce={nonce}',
+                f'nonce={nonce if isinstance(nonce, int) else -1}',
             )))
 
             if key in calls:
@@ -336,7 +365,7 @@ class TezosProvider(Provider):
                 level=level,
                 hash=hash,
                 counter=counter,
-                nonce=nonce if nonce else None,
+                nonce=nonce if isinstance(nonce, int) else -1,
                 kind='call',
                 function=function,
                 args=args,
