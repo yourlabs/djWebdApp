@@ -106,11 +106,8 @@ class Provider:
     def deploy(self, transaction):
         raise NotImplementedError()
 
-    def index(self):
-        start_level = current_level = (
-            self.head - self.blockchain.min_confirmations + 1
-        )
-
+    def reorg(self):
+        current_level = self.head
         reorg = (
             self.blockchain.max_level
             and current_level < self.blockchain.max_level
@@ -118,7 +115,7 @@ class Provider:
         if reorg:
             self.logger.warning(
                 f'Detected reorg in {self.blockchain} '
-                f'from {self.blockchain.max_level} to {start_level}'
+                f'from {self.blockchain.index_level} to {current_level}'
             )
             # reorg
             Transaction.objects.filter(
@@ -132,40 +129,31 @@ class Provider:
             )
             self.blockchain.max_level = current_level
             self.blockchain.save()
+            return True  # commit to reorg in a transaction
+
+    def index(self):
+        if self.reorg():
             return  # commit to reorg in a transaction
-
-        fresh = (
-            self.blockchain.max_level
-            and start_level == self.blockchain.max_level
-        )
-        if fresh:
-            # no need to go all way back further if we are up to date just
-            # check the head
-            max_depth = 1
-
-        resume = (
-            self.blockchain.max_level
-            and start_level > self.blockchain.max_level
-        )
-        if resume:
-            # go all way back to where we left
-            max_depth = start_level - self.blockchain.max_level
-            # last block was maybe not complete at the time of indexation:
-            # compensate start level by adding one block
-            max_depth += 1
-
-        if not self.blockchain.max_level:
-            # go with an arbitrary backlog
-            max_depth = 500
 
         self.index_init()
 
-        while current_level and start_level - current_level < max_depth:
-            self.logger.debug(f'Indexing level {current_level}')
-            self.index_level(current_level)
-            current_level -= 1
+        from django.db.models import Min
+        level = self.blockchain.transaction_set.filter(
+            state='confirm'
+        ).aggregate(
+            Min('level')
+        )['level__min']
+        if not level:
+            if self.blockchain.max_level:
+                level = self.blockchain.max_level
+            else:
+                level = self.blockchain.max_level = 0
 
-        self.blockchain.max_level = start_level
+        while level <= self.head:
+            self.logger.debug(f'Indexing level {self.blockchain.max_level}')
+            self.index_level(level)
+            self.blockchain.max_level = level
+            level += 1
         self.blockchain.save()
 
     def contracts(self):
