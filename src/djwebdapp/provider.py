@@ -109,8 +109,8 @@ class Provider:
     def reorg(self):
         current_level = self.head
         reorg = (
-            self.blockchain.max_level
-            and current_level < self.blockchain.max_level
+            self.blockchain.index_level
+            and current_level < self.blockchain.index_level
         )
         if reorg:
             self.logger.warning(
@@ -127,7 +127,7 @@ class Provider:
                 address=None,
                 state='deleted',
             )
-            self.blockchain.max_level = current_level
+            self.blockchain.index_level = current_level
             self.blockchain.save()
             return True  # commit to reorg in a transaction
 
@@ -144,15 +144,15 @@ class Provider:
             Min('level')
         )['level__min']
         if not level:
-            if self.blockchain.max_level:
-                level = self.blockchain.max_level
+            if self.blockchain.index_level:
+                level = self.blockchain.index_level
             else:
-                level = self.blockchain.max_level = 0
+                level = self.blockchain.index_level = 0
 
         while level <= self.head:
-            self.logger.debug(f'Indexing level {self.blockchain.max_level}')
+            self.logger.debug(f'Indexing level {self.blockchain.index_level}')
             self.index_level(level)
-            self.blockchain.max_level = level
+            self.blockchain.index_level = level
             level += 1
         self.blockchain.save()
 

@@ -150,7 +150,7 @@ class Blockchain(models.Model):
         max_length=15,
         help_text='Unit name, ie. satoshi, mutez...',
     )
-    max_level = models.PositiveIntegerField(
+    index_level = models.PositiveIntegerField(
         default=None,
         blank=True,
         null=True,
@@ -198,14 +198,14 @@ class Blockchain(models.Model):
             blockchain.wait()
             blockchain.provider.index()
         """
-        max_level = self.transaction_set.filter(
+        index_level = self.transaction_set.filter(
             state='confirm',
         ).aggregate(
-            max_level=Max('level')
-        )['max_level']
-        if not max_level:
+            index_level=Max('level')
+        )['index_level']
+        if not index_level:
             return  # no transaction to wait.
-        self.wait_level(max_level + self.min_confirmations)
+        self.wait_level(index_level + self.min_confirmations)
 
     def wait_level(self, level):
         """ Wait for the blockchain head to reach a given level. """
