@@ -159,7 +159,10 @@ class TezosProvider(Provider):
             call.function = content['parameters']['entrypoint']
             method = getattr(destination_contract.interface, call.function)
             args = method.decode(call.metadata['parameters']['value'])
-            call.args = args[call.function]
+            if args == call.function:
+                call.args = []
+            else:
+                call.args = args[call.function]
 
         call.save()
 
