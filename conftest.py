@@ -51,7 +51,7 @@ def evil(path, *scripts, variables=None):
                 print(source.split('\n')[tb.tb_next.tb_lineno - 1])
             else:
                 print(f'> {script_path}:?')
-                print(source)
+
             print('------------------------------------------------------')
             print('VARIABLES:')
             for name, value in variables.items():
@@ -61,6 +61,10 @@ def evil(path, *scripts, variables=None):
                     continue  # skip classes
                 display = str(value).split('\n')[0][:100]
                 print(f'{name}={display}')
+            print('------------------------------------------------------')
+            print('SOURCE:')
+            for number, line in enumerate(source.split('\n'), start=1):
+                print(f'{number} {line}')
             print('END DUMP =============================================')
             raise
     return variables
