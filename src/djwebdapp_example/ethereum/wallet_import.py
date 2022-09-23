@@ -9,7 +9,7 @@ private_key = blockchain.provider.client.eth.account.decrypt(keyfile, '')
 # send some ether from the seed account
 client.eth.send_transaction(dict(
     to=address,
-    value=client.toWei(4_000_000, 'ether'),
+    value=client.to_wei(4_000_000, 'ether'),
 ))
 
 # wait until the blockchain validates the transfer
