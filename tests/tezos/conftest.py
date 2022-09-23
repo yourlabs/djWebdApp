@@ -1,4 +1,5 @@
 import pytest
+import time
 
 
 @pytest.fixture
@@ -24,5 +25,10 @@ def using():
 @pytest.fixture
 def client(using):
     from pytezos import pytezos
+    def head():
+        return client.shell.head.metadata()['level_info']['level']
     client = pytezos.using(**using)
+    level = head()
+    while level == head:
+        time.sleep(0.1)
     return client
