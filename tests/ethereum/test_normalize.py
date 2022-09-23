@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.django_db
-def test_normalize(include):
+def test_normalize(include, blockchain):
     variables = include(
         'djwebdapp_example/ethereum',
         'client', 'load', 'deploy', 'blockchain', 'index', 'normalize',

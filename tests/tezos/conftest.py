@@ -1,6 +1,8 @@
 import pytest
 import pytezos
 
+from djwebdapp.models import Blockchain
+
 
 @pytest.fixture
 def using():
@@ -21,8 +23,8 @@ def head(client):
 
 
 @pytest.fixture
+@pytest.mark.django_db
 def blockchain(head):
-    from djwebdapp.models import Blockchain
     blockchain, _ = Blockchain.objects.update_or_create(
         name='Tezos Local',
         provider_class='djwebdapp_tezos.provider.TezosProvider',
