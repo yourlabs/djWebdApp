@@ -36,7 +36,7 @@ class EthereumProvider(Provider):
             or getattr(self.wallet, 'address', False)
             or self.client.eth.default_account
         )
-        return self.client.fromWei(weis, 'ether')
+        return self.client.from_wei(weis, 'ether')
 
     @property
     def head(self):
@@ -150,7 +150,7 @@ class EthereumProvider(Provider):
         tx = {
             'to': transaction.receiver.address,
             'from': transaction.sender.address,
-            'value': self.client.toWei(transaction.amount, 'ether'),
+            'value': self.client.to_wei(transaction.amount, 'ether'),
         }
         tx['gas'] = self.client.eth.estimate_gas(tx)
         tx['gasPrice'] = self.client.eth.gas_price
