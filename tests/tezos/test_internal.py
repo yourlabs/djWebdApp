@@ -13,30 +13,55 @@ from pytezos.contract.result import OperationResult
 from pymich.test import ContractLoader
 
 
-@pytest.mark.django_db
-def test_internal(client, blockchain, using):
+@pytest.fixture
+def loader(client):
     loader = ContractLoader.factory('proxy/A.py')
     loader.storage['B'] = client.key.public_key_hash()
     loader.storage['C'] = loader.storage['B']
     loader.storage['admin'] = client.key.public_key_hash()
-    A = loader.deploy(client)
+    return loader
+
+
+@pytest.fixture
+def A(loader, client):
+    return loader.deploy(client)
+
+
+@pytest.fixture
+def B(loader, client):
+    return loader.deploy(client)
+
+
+@pytest.fixture
+def C(loader, client):
+    return loader.deploy(client)
+
+
+@pytest.fixture
+def D(loader, client):
+    return loader.deploy(client)
+
+
+@pytest.fixture
+def opgs(A, B, C, D):
+    return (
+        A.set_B(B.address).send(min_confirmations=1),
+        A.set_C(C.address).send(min_confirmations=1),
+        B.set_B(D.address).send(min_confirmations=1),
+        C.set_C(A.address).send(min_confirmations=1),
+        A.call_B_and_C(dict(
+            value_b='B',
+            value_c='C',
+        )).with_amount(1_000).send(min_confirmations=1),
+    )
+
+
+@pytest.mark.django_db
+def test_internal(blockchain, A, B, C, D, opgs):
     caller = TezosTransaction.objects.create(
         blockchain=blockchain,
         address=A.address,
     )
-    B = loader.deploy(client)
-    C = loader.deploy(client)
-    D = loader.deploy(client)
-    opg1 = A.set_B(B.address).send(min_confirmations=1)
-    opg2 = A.set_C(C.address).send(min_confirmations=1)
-    # the following 2 should not be indexed
-    opg3 = B.set_B(D.address).send(min_confirmations=1)
-    opg4 = C.set_C(A.address).send(min_confirmations=1)
-    caller.blockchain.provider.index()
-    opg5 = A.call_B_and_C(dict(
-        value_b='B',
-        value_c='C',
-    )).with_amount(1_000).send(min_confirmations=1)
     caller.blockchain.wait_blocks()
     caller.blockchain.provider.index()
     result = TezosTransaction.objects.values_list(
@@ -62,31 +87,19 @@ def test_internal(client, blockchain, using):
 
 
 @pytest.mark.django_db
-def test_internal_other(client, blockchain, using):
-    loader = ContractLoader.factory('proxy/A.py')
-    loader.storage['B'] = client.key.public_key_hash()
-    loader.storage['C'] = loader.storage['B']
-    loader.storage['admin'] = client.key.public_key_hash()
-    A = loader.deploy(client)
-    B = loader.deploy(client)
+def test_internal_other(blockchain, A, B, C, D, opgs):
     subject = TezosTransaction.objects.create(
         blockchain=blockchain,
         address=B.address,
     )
-    C = loader.deploy(client)
-    D = loader.deploy(client)
-    opg1 = A.set_B(B.address).send(min_confirmations=1)
-    opg2 = A.set_C(C.address).send(min_confirmations=1)
-    opg3 = B.set_B(D.address).send(min_confirmations=1)
-    opg4 = C.set_C(A.address).send(min_confirmations=1)
-    opg5 = A.call_B_and_C(dict(
-        value_b='B',
-        value_c='C',
-    )).with_amount(1_000).send(min_confirmations=1)
     subject.blockchain.wait_blocks()
     subject.blockchain.provider.index()
     result = TezosTransaction.objects.values_list(
-        'function', 'args', 'amount', 'index', 'address'
+        'function',
+        'args',
+        'amount',
+        'index',
+        'address',
     ).order_by(
         'level', 'counter', 'nonce'
     )
