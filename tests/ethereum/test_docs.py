@@ -4,7 +4,7 @@ from djwebdapp_ethereum.models import EthereumTransaction
 
 
 @pytest.mark.django_db
-def test_index(include):
+def test_index(include, blockchain):
     """
     Test documentation scripts.
 
@@ -32,7 +32,7 @@ def test_index(include):
 
 
 @pytest.mark.django_db
-def test_transfer(include):
+def test_transfer(include, blockchain):
     include(
         'djwebdapp_example/ethereum',
         'client',
@@ -46,7 +46,7 @@ def test_transfer(include):
 
 
 @pytest.mark.django_db
-def test_spool(include):
+def test_spool(include, blockchain):
     include(
         'djwebdapp_example/ethereum',
         'client',
@@ -60,7 +60,7 @@ def test_spool(include):
 
 
 @pytest.mark.django_db
-def test_docs(include, admin_smoketest):
+def test_docs(include, admin_smoketest, blockchain):
     include(
         'djwebdapp_example/ethereum',
         'client',
