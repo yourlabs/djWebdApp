@@ -9,18 +9,10 @@ from pymich.test import ContractLoader
 
 
 @pytest.mark.django_db
-def test_call_with_amount(client):
+def test_call_with_amount(client, blockchain):
     auction = ContractLoader.factory('auction/auction.py')
     auction.storage['bids'][auction.storage['top_bidder']] = 0
     auction_ci = auction.deploy(client)
-
-    blockchain, _ = Blockchain.objects.get_or_create(
-        name='Tezos Local',
-        provider_class='djwebdapp_tezos.provider.TezosProvider',
-    )
-
-    # Add our node to the blockchain
-    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
 
     auction = TezosTransaction.objects.create(
         blockchain=blockchain,

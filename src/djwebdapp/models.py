@@ -313,6 +313,11 @@ class Transaction(models.Model):
     nonce = models.IntegerField(
         default=-1,
     )
+    number = models.IntegerField(
+        default=None,
+        blank=True,
+        null=True,
+    )
     gasprice = models.BigIntegerField(
         blank=True,
         null=True,

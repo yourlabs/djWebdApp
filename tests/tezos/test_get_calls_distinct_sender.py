@@ -5,15 +5,7 @@ from djwebdapp.models import Transaction, Blockchain, Account
 
 
 @pytest.mark.django_db
-def test_index(include):
-    blockchain, _ = Blockchain.objects.get_or_create(
-        name='Tezos Local',
-        provider_class='djwebdapp_tezos.provider.TezosProvider',
-    )
-
-    # Add our node to the blockchain
-    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
-
+def test_index(include, blockchain):
     sender_1 = Account.objects.create(blockchain=blockchain)
     sender_2 = Account.objects.create(blockchain=blockchain)
     sender_3 = Account.objects.create(blockchain=blockchain)
