@@ -54,6 +54,7 @@ class TezosProvider(Provider):
                     self.index_content(level, number, op, content)
 
     def index_content(self, level, number, op, content):
+        self.logger.info(f'Indexing content {number}@{level} {op["hash"]}')
         # index content normally
         hash = op['hash']
         if (
