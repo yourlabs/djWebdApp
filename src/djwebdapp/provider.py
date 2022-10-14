@@ -93,7 +93,6 @@ class Provider:
             kind='contract',
         ).filter(
             Q(state='confirm') | ~Q(address=None),
-        ).filter(
         )
         print(f'Found {len(self.contracts)} contracts to index')
 
