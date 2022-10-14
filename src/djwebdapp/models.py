@@ -467,7 +467,7 @@ class Transaction(models.Model):
             self.state,
             int(datetime.datetime.now().strftime('%s')),
         ])
-        self.blockchain.provider.logger.debug(
+        self.blockchain.provider.logger.info(
             f'{self}.state={state}'
         )
         self.save()

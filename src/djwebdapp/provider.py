@@ -93,7 +93,6 @@ class Provider:
             kind='contract',
         ).filter(
             Q(state='confirm') | ~Q(address=None),
-        ).filter(
         )
         print(f'Found {len(self.contracts)} contracts to index')
 
@@ -150,7 +149,7 @@ class Provider:
                 level = self.blockchain.index_level = 0
 
         while level <= self.head:
-            self.logger.debug(f'Indexing level {self.blockchain.index_level}')
+            self.logger.info(f'Indexing level {level}')
             self.index_level(level)
             self.blockchain.index_level = level
             level += 1

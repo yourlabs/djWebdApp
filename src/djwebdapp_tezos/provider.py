@@ -54,6 +54,7 @@ class TezosProvider(Provider):
                     self.index_content(level, number, op, content)
 
     def index_content(self, level, number, op, content):
+        self.logger.info(f'Indexing content {number}@{level} {op["hash"]}')
         # index content normally
         hash = op['hash']
         if (
@@ -71,7 +72,10 @@ class TezosProvider(Provider):
             self.index_contract(level, op, content, number=number)
         elif (
             content['kind'] == 'transaction'
-            and content.get('destination', None) in self.addresses
+            and (
+                content.get('destination', None) in self.addresses
+                or hash in self.hashes
+            )
         ):
             self.index_call(level, op, content, number=number)
 
@@ -128,7 +132,7 @@ class TezosProvider(Provider):
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
-        self.logger.info(f'Syncing internal call {hash}')
+        self.logger.info(f'Syncing transaction {hash}')
 
         # figure destination contract
         destination_address = content['destination']
@@ -216,7 +220,7 @@ class TezosProvider(Provider):
                 call.args = args[call.function]
 
         # save and return call
-        call.save()
+        call.state_set('done')
 
         return call
 
@@ -307,6 +311,7 @@ class TezosProvider(Provider):
         transaction.level = self.head + 1  # it'll be in the next block
         transaction.gas = origination['contents'][0]['fee']
         transaction.hash = origination['hash']
+        transaction.counter = origination['contents'][0]['counter']
         transaction.save()
 
     def send(self, transaction):

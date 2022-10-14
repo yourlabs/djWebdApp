@@ -103,8 +103,37 @@ def test_confirm(include, blockchain):
     contract.blockchain.wait()
     management.call_command('index')
 
+    # index should have changed state to done
     contract.refresh_from_db()
     assert contract.state == 'done'
+
+    # let's try the same with a call
+    mint = TezosTransaction.objects.create(
+        sender=variables['bootstrap'],
+        state='deploy',
+        max_fails=2,
+        contract=contract,
+        function='mint',
+        args=(
+            variables['bootstrap'].address,
+            1000,
+        ),
+    )
+    management.call_command('spool')
+
+    # should be in confirm state
+    mint.blockchain.provider.index()
+    mint.refresh_from_db()
+    assert mint.state == 'confirm'
+
+    # waiting to be on the new head *after* the confirmation blocks to make
+    # indexing move state to done
+    mint.blockchain.wait()
+    management.call_command('index')
+
+    # now transaction has changed state to done
+    mint.refresh_from_db()
+    assert mint.state == 'done'
 
 
 @pytest.mark.django_db
