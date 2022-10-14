@@ -129,6 +129,8 @@ class TezosProvider(Provider):
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
         self.logger.info(f'Syncing internal call {hash}')
+
+        # figure destination contract
         destination_address = content['destination']
         destination_contract = self.transaction_class.objects.filter(
             blockchain=self.blockchain,
@@ -144,21 +146,28 @@ class TezosProvider(Provider):
                 index=False,
                 number=number,
             )
+
+        # figure receiver
         receiver = None
         if self.is_implicit_contract(destination_address):
             receiver, _ = Account.objects.get_or_create(
                 blockchain=self.blockchain,
                 address=destination_address,
             )
+
+        # figure counter
         if caller:
             counter = caller.counter
         else:
             counter = content.get('counter', None)
+
+        # figure call
         if destination_contract:
             call_reverse_manager = \
                 destination_contract.call_set.select_subclasses()
         else:
             call_reverse_manager = receiver.transaction_received
+
         call = call_reverse_manager.filter(
             hash=hash,
             nonce=content.get('nonce', -1),
@@ -181,6 +190,8 @@ class TezosProvider(Provider):
                 caller=caller,
                 number=number,
             )
+
+        # update call
         call.metadata = content
         call.level = level
         call.sender = Account.objects.filter(
@@ -193,6 +204,8 @@ class TezosProvider(Provider):
                 blockchain=self.blockchain,
                 index=False,
             )
+
+        # patch against empty args in pytezes
         if 'parameters' in content:
             call.function = content['parameters']['entrypoint']
             method = getattr(destination_contract.interface, call.function)
@@ -202,6 +215,7 @@ class TezosProvider(Provider):
             else:
                 call.args = args[call.function]
 
+        # save and return call
         call.save()
 
         return call
