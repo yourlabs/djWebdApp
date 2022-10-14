@@ -37,7 +37,7 @@ def evil(path, *scripts, variables=None):
         try:
             exec(source, variables, variables)
         except:
-            _, _, tb = sys.exc_info()
+            exctype, exc, tb = sys.exc_info()
             print('\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             print('EXCEPTION IN INCLUDE: START DUMP =====================')
             if number:
@@ -51,7 +51,7 @@ def evil(path, *scripts, variables=None):
                 print(source.split('\n')[tb.tb_next.tb_lineno - 1])
             else:
                 print(f'> {script_path}:?')
-
+            print(f'{exctype} {exc}')
             print('------------------------------------------------------')
             print('VARIABLES:')
             for name, value in variables.items():
