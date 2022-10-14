@@ -50,53 +50,59 @@ class TezosProvider(Provider):
         block = self.client.shell.blocks[level]
         for ops in block.operations():
             for number, op in enumerate(ops):
-                hash = op['hash']
                 for content in op.get('contents', []):
-                    index_internal = False
-                    if (
-                        content['kind'] == 'origination'
-                        and 'metadata' in content
-                    ):
-                        result = content['metadata']['operation_result']
-                        address = result['originated_contracts'][0]
-                        if (
-                            address not in self.addresses
-                            and hash not in self.hashes
-                        ):
-                            # skip unknown contract originations
-                            continue
-                        self.index_contract(level, op, content, number=number)
-                    elif (
-                        content['kind'] == 'transaction'
-                        and content.get('destination', None) in self.addresses
-                    ):
-                        self.index_call(level, op, content, number=number)
-                    internal_operations = [
-                        *OperationResult.iter_contents(content)
-                    ]
-                    for internal_operation in internal_operations:
-                        destination = internal_operation.get('destination', '')
-                        source = internal_operation.get('source', '')
-                        if (
-                            destination in self.addresses
-                            or source in self.addresses
-                        ):
-                            index_internal = True
-                    if index_internal:
-                        source = self.index_transaction(
-                            level,
-                            op['hash'],
-                            content,
-                            number=number,
-                        )
-                        for internal_operation in internal_operations:
-                            self.index_transaction(
-                                level,
-                                op['hash'],
-                                internal_operation,
-                                source,
-                                number=number,
-                            )
+                    self.index_content(level, number, op, content)
+
+    def index_content(self, level, number, op, content):
+        # index content normally
+        hash = op['hash']
+        if (
+            content['kind'] == 'origination'
+            and 'metadata' in content
+        ):
+            result = content['metadata']['operation_result']
+            address = result['originated_contracts'][0]
+            if (
+                address not in self.addresses
+                and hash not in self.hashes
+            ):
+                # skip unknown contract originations
+                return
+            self.index_contract(level, op, content, number=number)
+        elif (
+            content['kind'] == 'transaction'
+            and content.get('destination', None) in self.addresses
+        ):
+            self.index_call(level, op, content, number=number)
+
+        # index internal transactions if necessary
+        index_internal = False
+        internal_operations = [
+            *OperationResult.iter_contents(content)
+        ]
+        for internal_operation in internal_operations:
+            destination = internal_operation.get('destination', '')
+            source = internal_operation.get('source', '')
+            if (
+                destination in self.addresses
+                or source in self.addresses
+            ):
+                index_internal = True
+        if index_internal:
+            source = self.index_transaction(
+                level,
+                op['hash'],
+                content,
+                number=number,
+            )
+            for internal_operation in internal_operations:
+                self.index_transaction(
+                    level,
+                    op['hash'],
+                    internal_operation,
+                    source,
+                    number=number,
+                )
 
     def index_contract(self, level, op, content, number):
         self.logger.info(f'Syncing origination {op["hash"]}')
