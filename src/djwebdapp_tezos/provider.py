@@ -129,7 +129,7 @@ class TezosProvider(Provider):
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
-        self.logger.info(f'Syncing internal call {hash}')
+        self.logger.info(f'Syncing transaction {hash}')
 
         # figure destination contract
         destination_address = content['destination']
