@@ -192,9 +192,11 @@ class TezosProvider(Provider):
 
         # figure call
         if destination_contract:
+            # this internal transaction targets a contract
             call_reverse_manager = \
                 destination_contract.call_set.select_subclasses()
         else:
+            # this internal transaction targets an account
             call_reverse_manager = receiver.transaction_received
 
         call = call_reverse_manager.filter(
