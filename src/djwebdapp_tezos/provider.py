@@ -100,13 +100,22 @@ class TezosProvider(Provider):
                 number=number,
             )
             for internal_operation in internal_operations:
-                self.index_transaction(
-                    level,
-                    op['hash'],
-                    internal_operation,
-                    source,
-                    number=number,
-                )
+                if 'destination' in internal_operation:
+                    self.index_transaction(
+                        level,
+                        op['hash'],
+                        internal_operation,
+                        source,
+                        number=number,
+                    )
+                if 'originated_contracts' in internal_operation:
+                    internal_origination = self.index_origination(
+                        level,
+                        op['hash'],
+                        internal_operation,
+                        source,
+                        number=number,
+                    )
 
     def index_contract(self, level, op, content, number):
         self.logger.info(f'Syncing origination {op["hash"]}')
@@ -129,6 +138,22 @@ class TezosProvider(Provider):
 
     def is_implicit_contract(self, address):
         return len(address) == 36 and address[:2] == 'tz'
+
+    def index_origination(self, level, hash, content, caller=None,
+                          number=None):
+        self.logger.info(f'Syncing origination {hash}')
+
+        for originated_address in content['originated_contracts']:
+            contract, created = self.transaction_class.objects.get_or_create(
+                address=originated_address,
+            )
+            contract.level = level
+            contract.address = address
+            contract.hash = hash
+            contract.gas = content['fee']
+            contract.metadata = content
+            contract.number = number
+            contract.state_set('done')
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
@@ -240,14 +265,23 @@ class TezosProvider(Provider):
         internal_transactions = []
         for operation_content in internal_operations:
             if operation_content['kind'] == 'transaction':
-                internal_transaction = self.index_transaction(
-                    level,
-                    op['hash'],
-                    operation_content,
-                    source,
-                    number=number,
-                )
-                internal_transactions.append(internal_transaction)
+                if 'destination' in operation_content:
+                    internal_transaction = self.index_transaction(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
+                    internal_transactions.append(internal_transaction)
+                if 'originated_contracts' in operation_content:
+                    internal_origination = self.index_origination(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
 
         # save all calls
         source.state_set('held')
