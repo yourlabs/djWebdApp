@@ -109,7 +109,7 @@ class TezosProvider(Provider):
                         number=number,
                     )
                 if 'originated_contracts' in internal_operation:
-                    internal_origination = self.index_origination(
+                    self.index_origination(
                         level,
                         op['hash'],
                         internal_operation,
@@ -148,7 +148,6 @@ class TezosProvider(Provider):
                 address=originated_address,
             )
             contract.level = level
-            contract.address = address
             contract.hash = hash
             contract.gas = content['fee']
             contract.metadata = content
@@ -277,7 +276,7 @@ class TezosProvider(Provider):
                     )
                     internal_transactions.append(internal_transaction)
                 if 'originated_contracts' in operation_content:
-                    internal_origination = self.index_origination(
+                    self.index_origination(
                         level,
                         op['hash'],
                         operation_content,
