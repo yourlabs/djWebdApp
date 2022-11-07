@@ -100,13 +100,22 @@ class TezosProvider(Provider):
                 number=number,
             )
             for internal_operation in internal_operations:
-                self.index_transaction(
-                    level,
-                    op['hash'],
-                    internal_operation,
-                    source,
-                    number=number,
-                )
+                if 'destination' in internal_operation:
+                    self.index_transaction(
+                        level,
+                        op['hash'],
+                        internal_operation,
+                        source,
+                        number=number,
+                    )
+                if 'originated_contracts' in internal_operation:
+                    self.index_origination(
+                        level,
+                        op['hash'],
+                        internal_operation,
+                        source,
+                        number=number,
+                    )
 
     def index_contract(self, level, op, content, number):
         self.logger.info(f'Syncing origination {op["hash"]}')
@@ -129,6 +138,22 @@ class TezosProvider(Provider):
 
     def is_implicit_contract(self, address):
         return len(address) == 36 and address[:2] == 'tz'
+
+    def index_origination(self, level, hash, content, caller=None,
+                          number=None):
+        self.logger.info(f'Syncing origination {hash}')
+
+        for originated_address in content['result']['originated_contracts']:
+            contract, created = self.transaction_class.objects.get_or_create(
+                address=originated_address,
+                blockchain=self.blockchain,
+            )
+            contract.level = level
+            contract.hash = hash
+            contract.gas = content.get('fee', 0)
+            contract.metadata = content
+            contract.number = number
+            contract.state_set('done')
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
@@ -167,9 +192,11 @@ class TezosProvider(Provider):
 
         # figure call
         if destination_contract:
+            # this internal transaction targets a contract
             call_reverse_manager = \
                 destination_contract.call_set.select_subclasses()
         else:
+            # this internal transaction targets an account
             call_reverse_manager = receiver.transaction_received
 
         call = call_reverse_manager.filter(
@@ -240,14 +267,34 @@ class TezosProvider(Provider):
         internal_transactions = []
         for operation_content in internal_operations:
             if operation_content['kind'] == 'transaction':
-                internal_transaction = self.index_transaction(
-                    level,
-                    op['hash'],
-                    operation_content,
-                    source,
-                    number=number,
-                )
-                internal_transactions.append(internal_transaction)
+                if 'destination' in operation_content:
+                    internal_transaction = self.index_transaction(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
+                    internal_transactions.append(internal_transaction)
+                # Are we sure that this is not dead code? I thought
+                # 'originated contracts' only appeared when kind=origination
+                if 'originated_contracts' in operation_content:
+                    self.index_origination(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
+            if operation_content['kind'] == 'origination':
+                if 'originated_contracts' in operation_content['result']:
+                    self.index_origination(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
 
         # save all calls
         source.state_set('held')
