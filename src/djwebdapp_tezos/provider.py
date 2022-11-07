@@ -143,13 +143,14 @@ class TezosProvider(Provider):
                           number=None):
         self.logger.info(f'Syncing origination {hash}')
 
-        for originated_address in content['originated_contracts']:
+        for originated_address in content['result']['originated_contracts']:
             contract, created = self.transaction_class.objects.get_or_create(
                 address=originated_address,
+                blockchain = self.blockchain,
             )
             contract.level = level
             contract.hash = hash
-            contract.gas = content['fee']
+            contract.gas = content.get('fee', 0)
             contract.metadata = content
             contract.number = number
             contract.state_set('done')
@@ -275,7 +276,18 @@ class TezosProvider(Provider):
                         number=number,
                     )
                     internal_transactions.append(internal_transaction)
+                # Are we sure that this is not dead code? I thought 'originated contracts'
+                # only appeared when kind=origination
                 if 'originated_contracts' in operation_content:
+                    self.index_origination(
+                        level,
+                        op['hash'],
+                        operation_content,
+                        source,
+                        number=number,
+                    )
+            if operation_content['kind'] == 'origination':
+                if 'originated_contracts' in operation_content['result']:
                     self.index_origination(
                         level,
                         op['hash'],

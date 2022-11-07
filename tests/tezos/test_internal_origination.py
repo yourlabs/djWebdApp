@@ -53,6 +53,7 @@ def test_internal_operation(client, using, blockchain):
 
     blockchain.provider.index()
 
+    contract.refresh_from_db()
     assert contract.hash
     assert TezosTransaction.objects.get(
         blockchain=blockchain,
