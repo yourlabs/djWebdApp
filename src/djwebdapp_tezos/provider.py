@@ -206,7 +206,7 @@ class TezosProvider(Provider):
             # we shouldn't take the level into account
             # when filtering due to confirm transactions
             # that "overide" the level in djwebdapp.provider.index
-            #level=level,
+            # level=level,
         ).first()
         contract = None
         if not self.is_implicit_contract(destination_address):
