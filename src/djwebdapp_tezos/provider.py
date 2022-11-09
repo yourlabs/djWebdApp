@@ -247,7 +247,10 @@ class TezosProvider(Provider):
             if args == call.function:
                 call.args = []
             else:
-                call.args = args[call.function]
+                if call.function not in args:
+                    call.args = args
+                else:
+                    call.args = args[call.function]
 
         # save and return call
         call.state_set('done')
