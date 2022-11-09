@@ -165,7 +165,10 @@ class TezosProvider(Provider):
             hash=hash,
             nonce=content.get('nonce', -1),
             counter=counter,
-            level=level,
+            # we shouldn't take the level into account
+            # when filtering due to confirm transactions
+            # that "overide" the level in djwebdapp.provider.index
+            #level=level,
         ).first()
         contract = None
         if not self.is_implicit_contract(destination_address):
@@ -182,11 +185,11 @@ class TezosProvider(Provider):
                 state='held',
                 caller=caller,
                 number=number,
+                level=level,
             )
 
         # update call
         call.metadata = content
-        call.level = level
         call.sender = Account.objects.filter(
             address=content['source'],
             blockchain=self.blockchain,
