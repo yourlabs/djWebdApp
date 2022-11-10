@@ -80,42 +80,18 @@ class TezosProvider(Provider):
             self.index_call(level, op, content, number=number)
         else:
             # index internal transactions if necessary
-            index_internal = False
-            internal_operations = [
-                *OperationResult.iter_contents(content)
-            ]
-            for internal_operation in internal_operations:
-                destination = internal_operation.get('destination', '')
-                source = internal_operation.get('source', '')
+            for internal_op in OperationResult.iter_contents(content):
                 if (
-                    destination in self.addresses
-                    or source in self.addresses
+                    internal_op.get('destination', '') in self.addresses
+                    or internal_op.get('source', '') in self.addresses
                 ):
-                    index_internal = True
-            if index_internal:
-                source = self.index_transaction(
-                    level,
-                    op['hash'],
-                    content,
-                    number=number,
-                )
-                for internal_operation in internal_operations:
-                    if 'destination' in internal_operation:
-                        self.index_transaction(
-                            level,
-                            op['hash'],
-                            internal_operation,
-                            source,
-                            number=number,
-                        )
-                    if 'originated_contracts' in internal_operation:
-                        self.index_origination(
-                            level,
-                            op['hash'],
-                            internal_operation,
-                            source,
-                            number=number,
-                        )
+                    self.index_call(
+                        level,
+                        op,
+                        content,
+                        number=number,
+                    )
+                    break
 
     def index_contract(self, level, op, content, number):
         self.logger.info(f'Syncing origination {op["hash"]}')
@@ -159,58 +135,45 @@ class TezosProvider(Provider):
                           number=None):
         self.logger.info(f'Syncing transaction {hash}')
 
+        counter = caller.counter if caller else content.get('counter', None)
+
         # figure destination contract
         destination_address = content['destination']
-        destination_contract = self.transaction_class.objects.filter(
-            blockchain=self.blockchain,
-            address=destination_address,
-        ).first()
-        if (
-            not destination_contract
-            and not self.is_implicit_contract(destination_address)
-        ):
-            destination_contract = self.transaction_class.objects.create(
-                blockchain=self.blockchain,
-                address=destination_address,
-                index=False,
-                number=number,
-            )
 
-        # figure receiver
-        receiver = None
         if self.is_implicit_contract(destination_address):
+            # this transaction targets an account
+            contract = None
             receiver, _ = Account.objects.get_or_create(
                 blockchain=self.blockchain,
                 address=destination_address,
             )
-
-        # figure counter
-        if caller:
-            counter = caller.counter
+            qs = receiver.transaction_received
         else:
-            counter = content.get('counter', None)
+            # this transaction targets a contract
+            receiver = None
+            contract = self.transaction_class.objects.filter(
+                blockchain=self.blockchain,
+                address=destination_address,
+            ).first()
+            if not contract:
+                contract = self.transaction_class.objects.create(
+                    blockchain=self.blockchain,
+                    address=destination_address,
+                    index=False,
+                    number=number,
+                )
+            qs = contract.call_set.select_subclasses()
 
-        # figure call
-        if destination_contract:
-            # this internal transaction targets a contract
-            call_reverse_manager = \
-                destination_contract.call_set.select_subclasses()
-        else:
-            # this internal transaction targets an account
-            call_reverse_manager = receiver.transaction_received
-
-        call = call_reverse_manager.filter(
+        call = qs.filter(
             hash=hash,
             nonce=content.get('nonce', -1),
             counter=counter,
             # we shouldn't take the level into account
             # when filtering due to confirm transactions
             # that "overide" the level in djwebdapp.provider.index
-            # level=level,
+            # level=level,  <-- don't uncomment this
         ).first()
-        contract = None
-        if not self.is_implicit_contract(destination_address):
-            contract = destination_contract
+
         if not call:
             call = self.transaction_class(
                 hash=hash,
@@ -232,6 +195,7 @@ class TezosProvider(Provider):
             address=content['source'],
             blockchain=self.blockchain,
         ).first()
+
         if not call.sender:
             call.sender = Account.objects.create(
                 address=content['source'],
@@ -242,7 +206,7 @@ class TezosProvider(Provider):
         # patch against empty args in pytezes
         if 'parameters' in content:
             call.function = content['parameters']['entrypoint']
-            method = getattr(destination_contract.interface, call.function)
+            method = getattr(contract.interface, call.function)
             args = method.decode(call.metadata['parameters']['value'])
             if args == call.function:
                 call.args = []
