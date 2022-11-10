@@ -80,42 +80,18 @@ class TezosProvider(Provider):
             self.index_call(level, op, content, number=number)
         else:
             # index internal transactions if necessary
-            index_internal = False
-            internal_operations = [
-                *OperationResult.iter_contents(content)
-            ]
-            for internal_operation in internal_operations:
-                destination = internal_operation.get('destination', '')
-                source = internal_operation.get('source', '')
+            for internal_op in OperationResult.iter_contents(content):
                 if (
-                    destination in self.addresses
-                    or source in self.addresses
+                    internal_op.get('destination', '') in self.addresses
+                    or internal_op.get('source', '') in self.addresses
                 ):
-                    index_internal = True
-            if index_internal:
-                source = self.index_transaction(
-                    level,
-                    op['hash'],
-                    content,
-                    number=number,
-                )
-                for internal_operation in internal_operations:
-                    if 'destination' in internal_operation:
-                        self.index_transaction(
-                            level,
-                            op['hash'],
-                            internal_operation,
-                            source,
-                            number=number,
-                        )
-                    if 'originated_contracts' in internal_operation:
-                        self.index_origination(
-                            level,
-                            op['hash'],
-                            internal_operation,
-                            source,
-                            number=number,
-                        )
+                    self.index_call(
+                        level,
+                        op,
+                        content,
+                        number=number,
+                    )
+                    break
 
     def index_contract(self, level, op, content, number):
         self.logger.info(f'Syncing origination {op["hash"]}')
