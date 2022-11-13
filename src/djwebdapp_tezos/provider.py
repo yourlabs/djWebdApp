@@ -257,13 +257,9 @@ class TezosProvider(Provider):
                         number=number,
                     )
 
-        # save all calls
-        source.state_set('held')
-        [tx.state_set('held') for tx in internal_transactions]
-        # call indexing signals starting with the external call
-        source.state_set('done')
-        # call indexing signals for internal tx in execution order
-        [tx.state_set('done') for tx in internal_transactions]
+        self.ready_to_normalize(source)
+        for tx in internal_transactions:
+            self.ready_to_normalize(tx)
 
         return source
 

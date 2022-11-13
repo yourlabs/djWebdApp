@@ -5,7 +5,7 @@ from django import db
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
-from djwebdapp.signals import get_args
+from djwebdapp.signals import get_args, ready_to_normalize
 
 
 def call_deploy(arg):
@@ -66,6 +66,12 @@ class Provider:
             if result:
                 return result
         return transaction.args
+
+    def ready_to_normalize(self, transaction):
+        ready_to_normalize.send(
+            sender=type(self),
+            instance=transaction,
+        )
 
     @property
     def client(self):
