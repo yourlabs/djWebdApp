@@ -429,6 +429,11 @@ class Transaction(models.Model):
         default=True,
         help_text='Wether the indexer should index all transactions or not',
     )
+    dependencies = models.ManyToManyField(
+        "Transaction",
+        default=list,
+        related_name="consumer_set",
+    )
     objects = InheritanceManager()
 
     class Meta:

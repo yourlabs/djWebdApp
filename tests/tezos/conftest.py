@@ -1,7 +1,8 @@
+import binascii
 import pytest
 import pytezos
 
-from djwebdapp.models import Blockchain
+from djwebdapp.models import Account, Blockchain
 
 
 @pytest.fixture
@@ -36,3 +37,17 @@ def blockchain(head):
     )
     blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
     return blockchain
+
+@pytest.fixture
+@pytest.mark.django_db
+def alice(blockchain):
+    alice, _ = Account.objects.update_or_create(
+        blockchain=blockchain,
+        address='tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx',
+        defaults=dict(
+            secret_key=binascii.b2a_base64(pytezos.Key.from_encoded_key(
+                'edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh'
+            ).secret_exponent).decode(),
+        ),
+    )
+    return alice

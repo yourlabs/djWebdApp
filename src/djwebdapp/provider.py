@@ -155,6 +155,24 @@ class Provider:
             level += 1
         self.blockchain.save()
 
+    def transactions(self):
+        return self.transaction_class.objects.filter(
+            blockchain=self.blockchain,
+            hash=None,
+            sender__blockchain__is_active=True,
+        ).filter(
+            Q(sender__last_level__lt=self.head)
+            | Q(sender__last_level=None)
+        ).exclude(
+            Q(sender__balance=None)
+            | Q(sender__balance=0)
+            | Q(state__in=self.exclude_states)
+        ).select_related(
+            'blockchain'
+        ).order_by(
+            'created_at'
+        )
+
     def contracts(self):
         return self.transaction_class.objects.filter(
             blockchain=self.blockchain,
@@ -216,68 +234,124 @@ class Provider:
             'created_at'
         )
 
-    def spool(self):
-        # senders which have already deployed during this block must be
-        # excluded
-        # is there any new transfer to deploy from an account with balance?
-        transfer = self.transfers().filter(last_fail=None).first()
-        if transfer:
-            self.logger.info(f'Deploying transfer {transfer}')
-            return transfer.deploy()
-        self.logger.info('Found 0 transfers to deploy')
+    def get_transaction_dependency(
+            self,
+            transaction,
+            depth=0,
+            ascendency=None
+    ):
+        MAX_DEPTH = 10
+        if depth > MAX_DEPTH:
+            raise Exception("Transaction max dependency depth exceeded.")
 
-        # is there any new contract to deploy from an account with balance?
-        contract = self.contracts().filter(last_fail=None).first()
+        if not ascendency:
+            ascendency = [transaction]
 
-        if contract:
-            self.logger.info(f'Deploying contract {contract}')
-            contract.deploy()
-            return contract
-        self.logger.info('Found 0 contracts to deploy')
+        # return current transaction if no dependencies
+        if not transaction.dependencies.count():
+            return transaction
 
+        dependencies = transaction.dependencies.select_subclasses(
+            self.transaction_class,
+        ).all()
+        for dependency in dependencies:
+            if dependency.state == "done":
+                continue
+            if dependency.state == "aborted":
+                # return the list of transactions that depend on
+                # this dependency to that the caller can handle them
+                # if it needs to change their states to aborted as
+                # well
+                return [dependency] + ascendency
+            if dependency.state == "retry":
+                return dependency
+            if dependency.state == "deploy":
+                sub_dependency = self.get_transaction_dependency(
+                    dependency,
+                    depth + 1,
+                    ascendency
+                )
+                if isinstance(sub_dependency, list):
+                    # aborted sub dependency
+                    return [dependency] + sub_dependency
+                elif (
+                    isinstance(sub_dependency, self.transaction_class)
+                    and sub_dependency.state != "done"
+                ):
+                    # if the sub_dependency is not deployed, return it
+                    return sub_dependency
+                else:
+                    # all sub_dependencies are deployed
+                    return dependency
+            if dependency.state in self.exclude_states:
+                # the dependency is an excluded state that is not
+                # `aborted` (caught earlier in the condition), we
+                # return nothing so that the caller is aware of the
+                # situation
+                return None
+
+        # if nothing has returned by this line,then all
+        # dependencies are properly deployed
+        return transaction
+
+    def get_candidate_calls(self):
         n_calls = 15
-        calls = self.calls().filter(last_fail=None)
-        distinct_calls = get_calls_distinct_sender(calls, n_calls)
+        calls_qs = self.transactions().exclude(level__gte=self.head)
+        distinct_candidate_calls = get_calls_distinct_sender(calls_qs, n_calls)
+        calls = []
+        for candidate_call in distinct_candidate_calls:
+            while True:
+                dependency = self.get_transaction_dependency(candidate_call)
+                if isinstance(dependency, list):
+                    # candidate call has an aborted dependency
+                    # mark all dependencies until the aborted dependency
+                    # as `aborted`
+                    self.transaction_class.objects.filter(
+                        pk__in=[tx.pk for tx in dependency],
+                    ).update(state="aborted")
 
-        if distinct_calls:
+                if isinstance(dependency, list) or dependency is None:
+                    exclude_pks = [
+                        tx.pk for tx in distinct_candidate_calls + calls
+                    ]
+
+                    # fetch another candidate call and iterate in the
+                    # while loop until we find a deployable call
+                    sender_addresses = set([
+                        tx.sender
+                        for tx in set(distinct_candidate_calls + calls)
+                    ])
+                    sender_addresses.remove(candidate_call.sender)
+                    candidate_call = self.transactions().exclude(
+                        level__gte=self.head,
+                        pk__in=exclude_pks,
+                        sender__address__in=sender_addresses,
+                    ).first()
+                    if not candidate_call:
+                        break
+                else:
+                    calls.append(dependency)
+                    break
+
+        return calls
+
+    def spool(self):
+        calls = self.get_candidate_calls()
+
+        if calls:
             db.connections.close_all()
             pool = get_context("fork").Pool(n_calls)
             results = pool.map(
                 call_deploy,
-                [(self.logger, call) for call in list(distinct_calls)]
+                [(self.logger, call) for call in set(list(calls))]
             )
             for result in results:
                 result.save()
 
-            if len(distinct_calls) == 1:
-                return distinct_calls[0]
+            if len(calls) == 1:
+                return calls[0]
             else:
-                return distinct_calls
-        self.logger.info('Found 0 calls to send')
-
-        # is there any transfer to retry from an account with balance?
-        transfer = self.transfers().order_by('last_fail').first()
-        if transfer:
-            self.logger.info(f'Retrying transfer {transfer}')
-            transfer.deploy()
-            return transfer
-        self.logger.info('Found 0 transfer to retry')
-
-        # any contract to retry?
-        contract = self.contracts().order_by('last_fail').first()
-        if contract:
-            self.logger.info(f'Retrying contract {contract}')
-            contract.deploy()
-            return contract
-        self.logger.info('Found 0 contract to retry')
-
-        # any call to retry?
-        call = self.calls().order_by('last_fail').first()
-        if call:
-            self.logger.info(f'Retrying function {call}')
-            call.deploy()
-            return call
-        self.logger.info('Found 0 call to retry')
+                return calls
 
 
 def fakehash(leet):
