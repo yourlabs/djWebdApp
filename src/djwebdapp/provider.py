@@ -4,6 +4,7 @@ import random
 from django import db
 from django.db.models import Q
 
+from djwebdapp.exceptions import AbortedDependencyError, ExcludedDependencyError
 from djwebdapp.models import Transaction
 from djwebdapp.signals import get_args
 
@@ -262,15 +263,20 @@ class Provider:
                 # this dependency to that the caller can handle them
                 # if it needs to change their states to aborted as
                 # well
+                raise AbortedDependencyError(dependency, ascendency)
                 return [dependency] + ascendency
             if dependency.state == "retry":
                 return dependency
             if dependency.state == "deploy":
-                sub_dependency = self.get_transaction_dependency(
-                    dependency,
-                    depth + 1,
-                    ascendency
-                )
+                try:
+                    sub_dependency = self.get_transaction_dependency(
+                        dependency,
+                        depth + 1,
+                        ascendency
+                    )
+                except AbortedDependencyError as exc:
+                    raise AbortedDependencyError(dependency, sub_dependency)
+
                 if isinstance(sub_dependency, list):
                     # aborted sub dependency
                     return [dependency] + sub_dependency
@@ -288,10 +294,12 @@ class Provider:
                 # `aborted` (caught earlier in the condition), we
                 # return nothing so that the caller is aware of the
                 # situation
+                raise ExcludedDependencyError()
                 return None
 
         # if nothing has returned by this line,then all
-        # dependencies are properly deployed
+        # dependencies are properly deployed, return this transaction as
+        # dependency
         return transaction
 
     def get_candidate_calls(self):
@@ -301,36 +309,38 @@ class Provider:
         calls = []
         for candidate_call in distinct_candidate_calls:
             while True:
-                dependency = self.get_transaction_dependency(candidate_call)
-                if isinstance(dependency, list):
+                try:
+                    dependency = self.get_transaction_dependency(candidate_call)
+                except AbortedDependencyError as exc:
                     # candidate call has an aborted dependency
                     # mark all dependencies until the aborted dependency
                     # as `aborted`
                     self.transaction_class.objects.filter(
-                        pk__in=[tx.pk for tx in dependency],
+                        pk__in=exc.transactions_pks(),
                     ).update(state="aborted")
-
-                if isinstance(dependency, list) or dependency is None:
-                    exclude_pks = [
-                        tx.pk for tx in distinct_candidate_calls + calls
-                    ]
-
-                    # fetch another candidate call and iterate in the
-                    # while loop until we find a deployable call
-                    sender_addresses = set([
-                        tx.sender
-                        for tx in set(distinct_candidate_calls + calls)
-                    ])
-                    sender_addresses.remove(candidate_call.sender)
-                    candidate_call = self.transactions().exclude(
-                        level__gte=self.head,
-                        pk__in=exclude_pks,
-                        sender__address__in=sender_addresses,
-                    ).first()
-                    if not candidate_call:
-                        break
+                except ExcludedDependencyError:
+                    pass
                 else:
                     calls.append(dependency)
+                    break
+
+                exclude_pks = [
+                    tx.pk for tx in distinct_candidate_calls + calls
+                ]
+
+                # fetch another candidate call and iterate in the
+                # while loop until we find a deployable call
+                sender_addresses = set([
+                    tx.sender
+                    for tx in set(distinct_candidate_calls + calls)
+                ])
+                sender_addresses.remove(candidate_call.sender)
+                candidate_call = self.transactions().exclude(
+                    level__gte=self.head,
+                    pk__in=exclude_pks,
+                    sender__address__in=sender_addresses,
+                ).first()
+                if not candidate_call:
                     break
 
         return calls
@@ -339,11 +349,12 @@ class Provider:
         calls = self.get_candidate_calls()
 
         if calls:
+            calls = list(set(calls))
             db.connections.close_all()
-            pool = get_context("fork").Pool(n_calls)
+            pool = get_context("fork").Pool(len(calls))
             results = pool.map(
                 call_deploy,
-                [(self.logger, call) for call in set(list(calls))]
+                [(self.logger, call) for call in calls]
             )
             for result in results:
                 result.save()
