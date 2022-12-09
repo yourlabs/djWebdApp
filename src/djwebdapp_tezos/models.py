@@ -66,3 +66,9 @@ def contract_micheline(sender, instance, **kwargs):
 
     interface = instance.blockchain.provider.client.contract(instance.address)
     instance.micheline = interface.to_micheline()
+
+
+@receiver(signals.post_save, sender=TezosTransaction)
+def handle_implicit_dependency(sender, instance, **kwargs):
+    if instance.kind == 'function':
+        instance.dependencies.add(instance.contract)
