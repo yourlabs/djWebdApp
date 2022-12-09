@@ -430,9 +430,9 @@ class Transaction(models.Model):
         help_text='Wether the indexer should index all transactions or not',
     )
     dependencies = models.ManyToManyField(
-        "Transaction",
+        'Transaction',
         default=list,
-        related_name="consumer_set",
+        related_name='consumer_set',
     )
     objects = InheritanceManager()
 
@@ -460,15 +460,23 @@ class Transaction(models.Model):
 
     def dependencies_flat(self):
         # Warning: poor performance, works with small nested levels
+        yield from self.dependencies.all()
         for dependency in self.dependencies.all():
             yield dependency
             yield from dependency.dependencies_flat()
 
     def consumers_flat(self):
+        yield from self.consumer_set.all()
         # Warning: poor performance, works with small nested levels
         for dependency in self.consumer_set.all():
             yield dependency
             yield from dependency.consumers_flat()
+
+    def dependencies_add(self, *dependencies):
+        for dependency in dependencies:
+            self.dependencies.add(dependency)
+            for consumer in self.consumers_flat():
+                consumer.dependencies.add(dependency)
 
     def state_set(self, state):
         if state == 'done':

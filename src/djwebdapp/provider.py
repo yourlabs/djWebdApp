@@ -281,7 +281,7 @@ class Provider:
                         ascendency
                     )
                 except AbortedDependencyError as exc:
-                    raise AbortedDependencyError(dependency, sub_dependency)
+                    raise AbortedDependencyError(exc.ascendency, [exc.dependency, dependency])
 
                 if dependency.function:
                     if not dependency.contract_id:
@@ -318,7 +318,6 @@ class Provider:
     def get_candidate_calls(self):
         n_calls = 15
         calls_qs = self.transactions().exclude(level__gte=self.head)
-        breakpoint()
         distinct_candidate_calls = get_calls_distinct_sender(calls_qs, n_calls)
         calls = []
         for candidate_call in distinct_candidate_calls:
@@ -359,7 +358,7 @@ class Provider:
 
         return calls
 
-    def spool(self):
+    def spool(self, bp=False):
         calls = self.get_candidate_calls()
 
         if calls:

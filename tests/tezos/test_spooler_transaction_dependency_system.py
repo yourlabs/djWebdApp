@@ -1,5 +1,6 @@
 import pytest
 
+from djwebdapp.exceptions import AbortedDependencyError
 from djwebdapp_tezos.models import TezosTransaction
 
 
@@ -10,8 +11,8 @@ def test_spooling_tx_dependency_mecanism(blockchain):
     call_1 = TezosTransaction.objects.create(blockchain=blockchain, state="deploy")
     call_2 = TezosTransaction.objects.create(blockchain=blockchain, state="deploy")
 
-    call_1.dependencies.set([origination_1, origination_2])
-    call_2.dependencies.set([call_1])
+    call_1.dependencies_add(origination_1, origination_2)
+    call_2.dependencies_add(call_1)
 
     dependency = blockchain.provider.get_transaction_dependency(call_2)
     assert dependency == origination_2
@@ -52,12 +53,13 @@ def test_aborted_dependency_mecanism(blockchain, alice):
     call_2 = TezosTransaction.objects.create(sender=alice, blockchain=blockchain, state="deploy", name="call_2")
     call_3 = TezosTransaction.objects.create(sender=alice, blockchain=blockchain, state="deploy", name="call_3")
 
-    call_1.dependencies.set([origination_1, origination_2, origination_3])
-    call_2.dependencies.set([call_1])
-    call_3.dependencies.set([origination_2])
+    call_1.dependencies_add(origination_1, origination_2, origination_3)
+    call_2.dependencies_add(call_1)
+    call_3.dependencies_add(origination_2)
 
-    dependency = blockchain.provider.get_transaction_dependency(call_3)
-    assert dependency == [origination_2, call_3]
+    with pytest.raises(AbortedDependencyError) as exc:
+        dependency = blockchain.provider.get_transaction_dependency(call_3)
+    assert exc.value.dependency == origination_2
 
     dependency = blockchain.provider.get_transaction_dependency(call_2)
     assert dependency == origination_3
@@ -65,8 +67,9 @@ def test_aborted_dependency_mecanism(blockchain, alice):
     origination_3.state = "done"
     origination_3.save()
 
-    dependency = blockchain.provider.get_transaction_dependency(call_2)
-    assert dependency == [call_1, origination_2, call_2]
+    with pytest.raises(AbortedDependencyError) as exc:
+        dependency = blockchain.provider.get_transaction_dependency(call_2)
+    assert exc.value.ascendency == [origination_2, call_1]
 
     blockchain.provider.transaction_class.objects.all().values("name", "state")
 

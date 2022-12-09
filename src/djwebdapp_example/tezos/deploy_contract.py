@@ -23,14 +23,7 @@ mint = TezosTransaction.objects.create(
 )
 
 # Spool will first deploy the contract
-breakpoint()
 assert blockchain.provider.spool() == contract
-
-# Get deployment level
-contract.refresh_from_db()
-
-# But won't deploy the mint call on the same block
-assert not blockchain.provider.spool()
 
 # Waiting for confirmation blocks ...
 blockchain.wait()
@@ -38,7 +31,7 @@ blockchain.wait()
 # Index to fetch contract address
 blockchain.provider.index()
 
-# Now spool will deploy the mint call!
+# Deploy the mint call on the same block
 assert blockchain.provider.spool() == mint
 
 mint.refresh_from_db()
