@@ -1,6 +1,12 @@
+import binascii
 import pytest
 import os
 import sys
+
+from pytezos import Key
+
+from djwebdapp.models import Account, Blockchain
+from djwebdapp_tezos.models import TezosTransaction
 
 
 def evil(path, *scripts, variables=None):
@@ -95,3 +101,57 @@ def admin_smoketest(admin_client):
         for url in urls:
             assert admin_client.get(url).status_code == 200
     return _
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def wait_transaction():
+    def f(transaction: TezosTransaction, no_assert=False):
+        res = transaction.blockchain.provider.spool()
+        if not no_assert:
+            assert res == transaction
+        transaction.refresh_from_db()
+        transaction.blockchain.wait_level(transaction.level + 2)
+        transaction.blockchain.provider.index()
+        transaction.refresh_from_db()
+
+    return f
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def blockchain():
+    configuration = {
+        "bcd_api_host": "http://localhost:14000/",
+        "bcd_network_name": "sandboxnet",
+    }
+    blockchain, _ = Blockchain.objects.get_or_create(
+        name='Tezos Local',
+        provider_class='djwebdapp_tezos.provider.TezosProvider',
+        configuration=configuration,
+        min_confirmations=1,
+    )
+
+    # Add our node to the blockchain
+    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
+
+    blockchain.index_level = blockchain.provider.head
+    blockchain.save()
+
+    return blockchain
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def alice(blockchain):
+    alice, _ = Account.objects.update_or_create(
+        blockchain=blockchain,
+        address='tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td',
+        defaults=dict(
+            secret_key=binascii.b2a_base64(Key.from_encoded_key(
+                'edsk3EQB2zJvvGrMKzkUxhgERsy6qdDDw19TQyFWkYNUmGSxXiYm7Q'
+            ).secret_exponent).decode(),
+        ),
+    )
+
+    return alice
