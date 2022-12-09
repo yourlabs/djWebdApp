@@ -27,7 +27,7 @@ mint_2 = TezosTransaction.objects.create(
 new_wallet.provider.get_client().reveal().send(min_confirmations=1)
 
 calls = list(blockchain.provider.spool())
-assert calls == [mint_1, mint_2]
+assert calls == [mint_2, mint_1]
 
 for call in calls:
     call.refresh_from_db()
