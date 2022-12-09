@@ -3,7 +3,7 @@ new_account = client.eth.account.create()
 keyfile = new_account.encrypt('')
 
 # decode private key and get address
-address = Web3.toChecksumAddress(keyfile['address'])
+address = Web3.to_checksum_address(keyfile['address'])
 private_key = blockchain.provider.client.eth.account.decrypt(keyfile, '')
 
 # send some ether from the seed account
