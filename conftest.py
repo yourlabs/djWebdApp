@@ -6,6 +6,7 @@ import sys
 from pytezos import Key
 
 from djwebdapp.models import Account, Blockchain
+from djwebdapp_multisig.models import MultisigContract
 from djwebdapp_tezos.models import TezosTransaction
 
 
@@ -155,3 +156,50 @@ def alice(blockchain):
     )
 
     return alice
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def bob(blockchain):
+    bob, _ = Account.objects.update_or_create(
+        blockchain=blockchain,
+        address='tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx',
+        defaults=dict(
+            secret_key=binascii.b2a_base64(Key.from_encoded_key(
+                'edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh'
+            ).secret_exponent).decode(),
+        ),
+    )
+
+    return bob
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def charlie(blockchain):
+    charlie, _ = Account.objects.update_or_create(
+        blockchain=blockchain,
+        address='tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN',
+        defaults=dict(
+            secret_key=binascii.b2a_base64(Key.from_encoded_key(
+                'edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo'
+            ).secret_exponent).decode(),
+        ),
+    )
+
+    return charlie
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def multisig(wait_transaction, blockchain, alice):
+    multisig_contract = MultisigContract.objects.create(
+        admin=alice,
+        sender=alice,
+    )
+
+    wait_transaction(multisig_contract.origination)
+
+    assert blockchain.provider.spool() is None
+
+    return multisig_contract
