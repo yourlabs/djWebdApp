@@ -23,6 +23,7 @@ mint = TezosTransaction.objects.create(
 )
 
 # Spool will first deploy the contract
+breakpoint()
 assert blockchain.provider.spool() == contract
 
 # Get deployment level

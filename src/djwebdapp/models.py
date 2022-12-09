@@ -458,6 +458,18 @@ class Transaction(models.Model):
         else:
             return str(self.pk)
 
+    def dependencies_flat(self):
+        # Warning: poor performance, works with small nested levels
+        for dependency in self.dependencies.all():
+            yield dependency
+            yield from dependency.dependencies_flat()
+
+    def consumers_flat(self):
+        # Warning: poor performance, works with small nested levels
+        for dependency in self.consumer_set.all():
+            yield dependency
+            yield from dependency.consumers_flat()
+
     def state_set(self, state):
         if state == 'done':
             confirmed_level = self.level + self.blockchain.min_confirmations
@@ -476,6 +488,15 @@ class Transaction(models.Model):
             f'{self}.state={state}'
         )
         self.save()
+
+        if state == 'aborted':
+            if self.kind == 'contract':
+                for call in self.call_set.all():
+                    call.state_set('aborted')
+
+            for call in self.consumers_flat():
+                call.state_set('aborted')
+
 
     @property
     def provider(self):

@@ -1,10 +1,16 @@
+import logging
 from multiprocessing import get_context
 import random
 
 from django import db
 from django.db.models import Q
 
-from djwebdapp.exceptions import AbortedDependencyError, ExcludedDependencyError
+from djwebdapp.exceptions import (
+    AbortedDependencyError,
+    CallWithoutContractError,
+    ExcludedContractError,
+    ExcludedDependencyError,
+)
 from djwebdapp.models import Transaction
 from djwebdapp.signals import get_args
 
@@ -277,10 +283,17 @@ class Provider:
                 except AbortedDependencyError as exc:
                     raise AbortedDependencyError(dependency, sub_dependency)
 
-                if isinstance(sub_dependency, list):
-                    # aborted sub dependency
-                    return [dependency] + sub_dependency
-                elif (
+                if dependency.function:
+                    if not dependency.contract_id:
+                        # dependency is a functionn call without a contract foreign key
+                        raise CallWithoutContractError(dependency)
+                    if not dependency.contract.address:
+                        # dependency is a function call of a contract that isn't yet deployed
+                        if dependency.contract.state in exclude_states:
+                            raise ExcludedContractError(dependency, exclude_states)
+                        return dependency.contract
+
+                if (
                     isinstance(sub_dependency, self.transaction_class)
                     and sub_dependency.state != "done"
                 ):
@@ -305,6 +318,7 @@ class Provider:
     def get_candidate_calls(self):
         n_calls = 15
         calls_qs = self.transactions().exclude(level__gte=self.head)
+        breakpoint()
         distinct_candidate_calls = get_calls_distinct_sender(calls_qs, n_calls)
         calls = []
         for candidate_call in distinct_candidate_calls:
@@ -349,7 +363,7 @@ class Provider:
         calls = self.get_candidate_calls()
 
         if calls:
-            calls = list(set(call for call in calls if not call.function or call.contract.address))
+            calls = list(set(calls))
             if calls:
                 db.connections.close_all()
                 pool = get_context("fork").Pool(len(calls))
@@ -373,4 +387,4 @@ def fakehash(leet):
 
 
 class Success(Provider):
-    pass
+    logger = logging.getLogger('djwebdapp.providers.Success')
