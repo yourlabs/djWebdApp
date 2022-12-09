@@ -349,20 +349,21 @@ class Provider:
         calls = self.get_candidate_calls()
 
         if calls:
-            calls = list(set(calls))
-            db.connections.close_all()
-            pool = get_context("fork").Pool(len(calls))
-            results = pool.map(
-                call_deploy,
-                [(self.logger, call) for call in calls]
-            )
-            for result in results:
-                result.save()
+            calls = list(set(call for call in calls if not call.function or call.contract.address))
+            if calls:
+                db.connections.close_all()
+                pool = get_context("fork").Pool(len(calls))
+                results = pool.map(
+                    call_deploy,
+                    [(self.logger, call) for call in calls]
+                )
+                for result in results:
+                    result.save()
 
-            if len(calls) == 1:
-                return calls[0]
-            else:
-                return calls
+                if len(calls) == 1:
+                    return calls[0]
+                else:
+                    return calls
 
 
 def fakehash(leet):
