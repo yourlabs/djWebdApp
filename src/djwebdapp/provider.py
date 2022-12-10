@@ -7,8 +7,6 @@ from django.db.models import Q
 
 from djwebdapp.exceptions import (
     AbortedDependencyError,
-    CallWithoutContractError,
-    ExcludedContractError,
     ExcludedDependencyError,
 )
 from djwebdapp.models import Transaction
@@ -282,16 +280,6 @@ class Provider:
                     )
                 except AbortedDependencyError as exc:
                     raise AbortedDependencyError(exc.ascendency, [exc.dependency, dependency])
-
-                if dependency.function:
-                    if not dependency.contract_id:
-                        # dependency is a functionn call without a contract foreign key
-                        raise CallWithoutContractError(dependency)
-                    if not dependency.contract.address:
-                        # dependency is a function call of a contract that isn't yet deployed
-                        if dependency.contract.state in exclude_states:
-                            raise ExcludedContractError(dependency, exclude_states)
-                        return dependency.contract
 
                 if (
                     isinstance(sub_dependency, self.transaction_class)
