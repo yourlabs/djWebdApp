@@ -163,7 +163,7 @@ class EthereumProvider(Provider):
             private_key=transaction.sender.get_secret_key(),
         )
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
-        return self.client.toHex(
+        return self.client.to_hex(
             self.client.keccak(signed_txn.rawTransaction)
         )
 
@@ -195,6 +195,6 @@ class EthereumProvider(Provider):
         )
 
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
-        return self.client.toHex(
+        return self.client.to_hex(
             self.client.keccak(signed_txn.rawTransaction)
         )
