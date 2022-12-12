@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'djwebdapp_ethereum',
     'djwebdapp_tezos',
     'djwebdapp_example',
+    'djwebdapp_txgraph',
 
     'rest_framework',
     'rest_framework.authtoken',
