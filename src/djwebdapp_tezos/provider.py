@@ -161,6 +161,7 @@ class TezosProvider(Provider):
                     address=destination_address,
                     index=False,
                     number=number,
+                    state='held',
                 )
             qs = contract.call_set.select_subclasses()
 
@@ -217,7 +218,7 @@ class TezosProvider(Provider):
                     call.args = args[call.function]
 
         # save and return call
-        call.state_set('done')
+        call.save()
 
         return call
 
@@ -257,12 +258,9 @@ class TezosProvider(Provider):
                         number=number,
                     )
 
-        # save all calls
-        source.state_set('held')
-        [tx.state_set('held') for tx in internal_transactions]
-        # call indexing signals starting with the external call
+        # set all calls to done so that they can be indexed
+        # with all the caller-internal call relations setup
         source.state_set('done')
-        # call indexing signals for internal tx in execution order
         [tx.state_set('done') for tx in internal_transactions]
 
         return source
