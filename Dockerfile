@@ -4,6 +4,8 @@ ENV DJANGO_SETTINGS_MODULE=djwebdapp_demo.settings
 ENV PYTHONIOENCODING=UTF-8 PYTHONUNBUFFERED=1
 EXPOSE 8000
 
+RUN pacman -Sy --noconfirm archlinux-keyring
+RUN pacman-key --refresh-keys
 RUN pacman --overwrite '/*' -Syu --noconfirm vim libsodium libsecp256k1 && rm -rf /var/cache/pacman/pkg
 RUN useradd --home-dir /app --uid 1000 app && mkdir -p /app && chown -R app /app
 RUN pip install wheel
