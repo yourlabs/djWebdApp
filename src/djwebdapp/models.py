@@ -430,9 +430,10 @@ class Transaction(models.Model):
         help_text='Wether the indexer should index all transactions or not',
     )
     dependencies = models.ManyToManyField(
-        'Transaction',
+        'self',
         default=list,
         related_name='consumer_set',
+        through='Dependency',
     )
     objects = InheritanceManager()
 
@@ -458,25 +459,17 @@ class Transaction(models.Model):
         else:
             return str(self.pk)
 
-    def dependencies_flat(self):
-        # Warning: poor performance, works with small nested levels
-        yield from self.dependencies.all()
-        for dependency in self.dependencies.all():
-            yield dependency
-            yield from dependency.dependencies_flat()
-
-    def consumers_flat(self):
-        yield from self.consumer_set.all()
-        # Warning: poor performance, works with small nested levels
-        for dependency in self.consumer_set.all():
-            yield dependency
-            yield from dependency.consumers_flat()
-
     def dependencies_add(self, *dependencies):
         for dependency in dependencies:
             self.dependencies.add(dependency)
-            for consumer in self.consumers_flat():
+            for consumer in self.consumer_set.all():
                 consumer.dependencies.add(dependency)
+            for sub_dependency in dependency.dependencies.all():
+                self.dependencies.add(sub_dependency)
+
+    def dependencies_remove(self, *dependencies):
+        for dependency in dependencies:
+            self.dependencies.remove(dependency)
 
     def state_set(self, state):
         if state == 'done':
@@ -498,13 +491,8 @@ class Transaction(models.Model):
         self.save()
 
         if state == 'aborted':
-            if self.kind == 'contract':
-                for call in self.call_set.all():
-                    call.state_set('aborted')
-
-            for call in self.consumers_flat():
-                call.state_set('aborted')
-
+            for consumer in self.consumer_set.all():
+                consumer.state_set('aborted')
 
     @property
     def provider(self):
@@ -556,3 +544,7 @@ class Transaction(models.Model):
             self.blockchain_id = self.sender.blockchain_id
 
         return super().save(*args, **kwargs)
+
+
+class Dependency(models.Model):
+

@@ -1,5 +1,7 @@
 from django.db import models
 
+from django.db.models import signals
+from django.dispatch import receiver
 from djwebdapp.models import Transaction
 
 
@@ -33,3 +35,9 @@ class EthereumTransaction(Transaction):
         if self.bytecode:
             self.has_code = True
         return super().save(*args, **kwargs)
+
+
+@receiver(signals.post_save, sender=EthereumTransaction)
+def handle_implicit_dependency(sender, instance, **kwargs):
+    if instance.contract_id:
+        instance.dependencies.add(instance.contract)

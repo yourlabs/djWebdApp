@@ -70,5 +70,5 @@ def contract_micheline(sender, instance, **kwargs):
 
 @receiver(signals.post_save, sender=TezosTransaction)
 def handle_implicit_dependency(sender, instance, **kwargs):
-    if instance.kind == 'function':
+    if instance.contract_id:
         instance.dependencies.add(instance.contract)
