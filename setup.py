@@ -5,8 +5,16 @@ extras_require = dict(
     vault=[
         'mnemonic',
     ],
+    test=[
+        'django',
+        'djangorestframework',
+        'pytest',
+        'pytest-cov',
+        'pytest-django',
+        'web3[dev]>=6.0.0b9',
+    ],
     ethereum=[
-        'web3>=6.0.0b7',
+        'web3>=6.0.0b9',  # no [dev] for persistent deployments
     ],
     tezos=[
         'pytezos>3.4',
@@ -15,13 +23,6 @@ extras_require = dict(
         'pysodium',
         'secp256k1',
         'fastecdsa',
-    ],
-    test=[
-        'django',
-        'djangorestframework',
-        'pytest',
-        'pytest-cov',
-        'pytest-django',
     ],
 )
 

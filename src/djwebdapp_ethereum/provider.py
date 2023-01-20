@@ -16,7 +16,7 @@ class EthereumProvider(Provider):
 
     def generate_secret_key(self):
         wallet = self.client.eth.account.create()
-        return wallet.address, bytes(wallet.privateKey)
+        return wallet.address, bytes(wallet.key)
 
     def get_client(self, **kwargs):
         endpoint = self.blockchain.node_set.first().endpoint
@@ -163,7 +163,7 @@ class EthereumProvider(Provider):
             private_key=transaction.sender.get_secret_key(),
         )
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
-        return self.client.toHex(
+        return self.client.to_hex(
             self.client.keccak(signed_txn.rawTransaction)
         )
 
@@ -195,6 +195,6 @@ class EthereumProvider(Provider):
         )
 
         self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
-        return self.client.toHex(
+        return self.client.to_hex(
             self.client.keccak(signed_txn.rawTransaction)
         )
