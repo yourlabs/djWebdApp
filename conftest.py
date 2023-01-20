@@ -1,9 +1,6 @@
-import binascii
 import pytest
 import os
 import sys
-
-from pytezos import Key
 
 from djwebdapp.models import Account, Blockchain
 from djwebdapp_multisig.models import MultisigContract
@@ -106,100 +103,13 @@ def admin_smoketest(admin_client):
 
 @pytest.fixture
 @pytest.mark.django_db
-def wait_transaction():
-    def f(transaction: TezosTransaction, no_assert=False):
+def deploy_and_index():
+    def f(transaction, no_assert=False):
         res = transaction.blockchain.provider.spool()
         if not no_assert:
             assert res == transaction
-        transaction.refresh_from_db()
-        transaction.blockchain.wait_level(transaction.level + 2)
+        transaction.blockchain.wait()
         transaction.blockchain.provider.index()
         transaction.refresh_from_db()
 
     return f
-
-
-@pytest.fixture
-@pytest.mark.django_db
-def blockchain():
-    configuration = {
-        "bcd_api_host": "http://localhost:14000/",
-        "bcd_network_name": "sandboxnet",
-    }
-    blockchain, _ = Blockchain.objects.get_or_create(
-        name='Tezos Local',
-        provider_class='djwebdapp_tezos.provider.TezosProvider',
-        configuration=configuration,
-        min_confirmations=1,
-    )
-
-    # Add our node to the blockchain
-    blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
-
-    blockchain.index_level = blockchain.provider.head
-    blockchain.save()
-
-    return blockchain
-
-
-@pytest.fixture
-@pytest.mark.django_db
-def alice(blockchain):
-    alice, _ = Account.objects.update_or_create(
-        blockchain=blockchain,
-        address='tz1Yigc57GHQixFwDEVzj5N1znSCU3aq15td',
-        defaults=dict(
-            secret_key=binascii.b2a_base64(Key.from_encoded_key(
-                'edsk3EQB2zJvvGrMKzkUxhgERsy6qdDDw19TQyFWkYNUmGSxXiYm7Q'
-            ).secret_exponent).decode(),
-        ),
-    )
-
-    return alice
-
-
-@pytest.fixture
-@pytest.mark.django_db
-def bob(blockchain):
-    bob, _ = Account.objects.update_or_create(
-        blockchain=blockchain,
-        address='tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx',
-        defaults=dict(
-            secret_key=binascii.b2a_base64(Key.from_encoded_key(
-                'edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh'
-            ).secret_exponent).decode(),
-        ),
-    )
-
-    return bob
-
-
-@pytest.fixture
-@pytest.mark.django_db
-def charlie(blockchain):
-    charlie, _ = Account.objects.update_or_create(
-        blockchain=blockchain,
-        address='tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN',
-        defaults=dict(
-            secret_key=binascii.b2a_base64(Key.from_encoded_key(
-                'edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo'
-            ).secret_exponent).decode(),
-        ),
-    )
-
-    return charlie
-
-
-@pytest.fixture
-@pytest.mark.django_db
-def multisig(wait_transaction, blockchain, alice):
-    multisig_contract = MultisigContract.objects.create(
-        admin=alice,
-        sender=alice,
-    )
-
-    wait_transaction(multisig_contract.origination)
-
-    assert blockchain.provider.spool() is None
-
-    return multisig_contract
