@@ -307,7 +307,7 @@ class TezosProvider(Provider):
     def originate(self, transaction):
         tx = self.client.origination(dict(
             code=transaction.micheline,
-            storage=self.get_args(transaction),
+            storage=transaction.get_args(),
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
