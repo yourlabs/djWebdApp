@@ -1,7 +1,6 @@
 import dateutil.parser
 
 from djwebdapp_tezos.models import TezosTransaction
-from djwebdapp_utils.models import IsNormalized
 from pytezos.operation.result import OperationResult
 
 
@@ -13,7 +12,7 @@ class AbstractIndexer:
         if instance.state != "done":
             return
 
-        if IsNormalized.objects.filter(transaction=instance, is_normalized=True):
+        if instance.normalized:
             return
 
         if not instance.function:
@@ -47,12 +46,8 @@ class AbstractIndexer:
         kwargs = dict(instance=instance, storage=storage)
         method(cls_instance, **kwargs)
 
-        IsNormalized.objects.update_or_create(
-            transaction=instance,
-            defaults=dict(
-                is_normalized=True,
-            ),
-        )
+        instance.normalized = True
+        instance.save()
 
     def get_timestamp(self, instance: TezosTransaction):
         endpoint = instance.blockchain.node_set.first().endpoint

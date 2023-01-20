@@ -15,14 +15,6 @@ from pytezos.operation.result import OperationResult
 User = get_user_model()
 
 
-class IsNormalized(models.Model):
-    transaction = models.ForeignKey(
-        TezosTransaction,
-        on_delete=models.CASCADE,
-    )
-    is_normalized = models.BooleanField(default=False)
-
-
 class AbstractTransaction(models.Model):
     entrypoint: str = NotImplementedError
     target_contract: "AbstractContract" = NotImplementedError

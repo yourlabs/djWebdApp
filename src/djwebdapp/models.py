@@ -354,6 +354,10 @@ class Transaction(models.Model):
         ('confirm', _('Deployed to confirm')),
         ('done', _('Confirmed finished')),
     )
+    normalized = models.BooleanField(
+        default=False,
+        help_text='Enabled when transaction is normalized',
+    )
     state = models.CharField(
         choices=STATE_CHOICES,
         default='held',
