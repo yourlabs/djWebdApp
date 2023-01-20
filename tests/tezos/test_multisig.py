@@ -8,12 +8,14 @@ def test_deploy_multisig(deploy_and_index, account1):
     multisig_contract = MultisigContract.objects.create(
         admin=account1,
         sender=account1,
+        state='deploy',
     )
+    assert multisig_contract.micheline
 
-    deploy_and_index(multisig_contract.origination)
+    deploy_and_index(multisig_contract)
 
     client = multisig_contract.sender.provider.client
-    multisig_interface = client.contract(multisig_contract.origination.address)
+    multisig_interface = client.contract(multisig_contract.address)
     assert multisig_interface.storage["admins"]() == [multisig_contract.admin.address]
 
 
@@ -22,18 +24,20 @@ def test_add_authorized_contract(deploy_and_index, account1):
     multisig_contract = MultisigContract.objects.create(
         admin=account1,
         sender=account1,
+        state='deploy',
     )
 
-    deploy_and_index(multisig_contract.origination)
+    deploy_and_index(multisig_contract)
 
     add_authorized_contract_call = AddAuthorizedContractCall.objects.create(
         sender=account1,
-        target_contract=multisig_contract,
-        contract_to_authorize=multisig_contract.origination,
+        contract=multisig_contract,
+        contract_to_authorize=multisig_contract,
+        state='deploy',
     )
 
-    deploy_and_index(add_authorized_contract_call.transaction)
+    deploy_and_index(add_authorized_contract_call)
 
     client = multisig_contract.sender.provider.client
-    multisig_interface = client.contract(multisig_contract.origination.address)
-    assert multisig_interface.storage["authorized_contracts"]() == [multisig_contract.origination.address]
+    multisig_interface = client.contract(multisig_contract.address)
+    assert multisig_interface.storage["authorized_contracts"]() == [multisig_contract.address]

@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from djwebdapp.models import Account
-from djwebdapp_tezos.models import TezosTransaction
+from djwebdapp_tezos.models import TezosCall, TezosContract
 from pytezos import ContractInterface
 
 from djwebdapp_utils.models import AbstractContract, AbstractTransaction
@@ -13,10 +13,12 @@ from djwebdapp_utils.models import AbstractContract, AbstractTransaction
 User = get_user_model()
 
 
-class MultisigContract(AbstractContract):
+class MultisigContract(TezosContract):
     contract_file_name = "multisig.tz"
     admin = models.ForeignKey(
-        Account, on_delete=models.CASCADE, related_name="multisigs_administered"
+        Account,
+        on_delete=models.CASCADE,
+        related_name="multisigs_administered",
     )
     owner = models.ForeignKey(
         User,
@@ -33,17 +35,10 @@ class MultisigContract(AbstractContract):
         return init_storage
 
 
-class AddAuthorizedContractCall(AbstractTransaction):
+class AddAuthorizedContractCall(TezosCall):
     entrypoint = "addAuthorizedContract"
     contract_to_authorize = models.ForeignKey(
-        TezosTransaction,
-        on_delete=models.CASCADE,
-        related_name="add_authorized_contract_calls",
-        blank=True,
-        null=True,
-    )
-    target_contract = models.ForeignKey(
-        MultisigContract,
+        'djwebdapp_tezos.TezosTransaction',
         on_delete=models.CASCADE,
         related_name="add_authorized_contract_calls",
         blank=True,

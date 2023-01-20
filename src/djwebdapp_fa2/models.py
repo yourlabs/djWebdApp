@@ -2,11 +2,11 @@ from django.db import models
 from djwebdapp.models import Account
 from djwebdapp_multisig.models import AddAuthorizedContractCall, MultisigContract
 
-from djwebdapp_utils.models import AbstractTransaction, AbstractContract
+from djwebdapp_tezos.models import TezosCall, TezosContract
 
 
 
-class MultisigedAbstractContract(AbstractContract):
+class MultisigedAbstractContract(TezosContract):
     multisig = models.ForeignKey(
         MultisigContract,
         on_delete=models.SET_NULL,
@@ -26,7 +26,6 @@ class Fa2Contract(MultisigedAbstractContract):
         null=True,
     )
     metadata_uri = models.CharField(max_length=500)
-    name = models.CharField(max_length=100, default="")
 
     def get_init_storage(self):
         contract_interface = self.get_contract_interface()
@@ -45,7 +44,7 @@ class Fa2Contract(MultisigedAbstractContract):
         AddAuthorizedContractCall.objects.create(
             sender=self.sender,
             contract_to_authorize=self.origination,
-            target_contract=self.multisig,
+            contract=self.multisig,
         )
 
 
@@ -61,20 +60,15 @@ class Fa2Token(models.Model):
         unique_together = ("token_id", "contract")
 
 
-class MintCall(AbstractTransaction):
+class MintCall(TezosCall):
     entrypoint = "mint"
-    target_contract = models.ForeignKey(
-        Fa2Contract,
-        on_delete=models.CASCADE,
-    )
-
     owner = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,
         related_name="mintcall_owner_set",
     )
     token_id = models.PositiveBigIntegerField()
-    amount = models.PositiveBigIntegerField()
+    token_amount = models.PositiveBigIntegerField()
     metadata_uri = models.CharField(max_length=500)
 
     def get_args(self):
@@ -88,13 +82,8 @@ class MintCall(AbstractTransaction):
         }
 
 
-class UpdateProxyCall(AbstractTransaction):
+class UpdateProxyCall(TezosCall):
     entrypoint = "updateProxy"
-    target_contract = models.ForeignKey(
-        Fa2Contract,
-        on_delete=models.CASCADE,
-    )
-
     remove_proxy = models.BooleanField(default=False)
     proxy = models.ForeignKey(
         Account,
