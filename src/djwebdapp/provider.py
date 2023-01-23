@@ -58,6 +58,9 @@ class Provider:
         raise NotImplementedError()
 
     def get_args(self, transaction):
+        if getattr(transaction, 'get_args'):
+            return transaction.get_args()
+
         results = get_args.send(
             sender=type(self),
             transaction=transaction,
