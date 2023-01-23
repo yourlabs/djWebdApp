@@ -200,7 +200,7 @@ class Provider:
             'blockchain'
         ).order_by(
             'created_at'
-        )
+        ).select_subclasses()
 
     def transfers(self):
         return self.transaction_class.objects.filter(
