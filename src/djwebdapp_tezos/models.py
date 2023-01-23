@@ -110,7 +110,12 @@ class TezosContract(TezosTransaction):
 
 
 class TezosCall(TezosTransaction):
-    contract_file_name = NotImplementedError
+    entrypoint = None
+
+    def save(self, *args, **kwargs):
+        if not self.function:
+            self.function = self.entrypoint
+        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True
