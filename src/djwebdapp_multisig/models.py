@@ -46,4 +46,4 @@ class AddAuthorizedContractCall(TezosCall):
     )
 
     def get_args(self):
-        return self.contract_to_authorize.address
+        return [self.contract_to_authorize.address]
