@@ -2,6 +2,7 @@ from django.db import models
 import networkx as nx
 
 from djwebdapp.models import Transaction
+from djwebdapp_txgraph.exceptions import TransactionGraphError
 
 
 class TransactionEdge(models.Model):
@@ -43,10 +44,10 @@ class TransactionGraph(models.Model):
 
     def add_edge(self, transactionEdge):
         if not isinstance(transactionEdge, TransactionEdge):
-            raise Exception("Function parameters must be instance of TransactionEdge")
+            raise TransactionGraphError("Function parameters must be instance of TransactionEdge")
 
         if transactionEdge.output_node.state == 'done':
-            raise Exception("Output node is already deployed.")
+            raise TransactionGraphError("Output node is already deployed.")
 
         G = nx.DiGraph()
 
@@ -61,9 +62,9 @@ class TransactionGraph(models.Model):
 
         G_undirected = G.to_undirected()
         if not nx.is_connected(G_undirected):
-            raise Exception("Adding this edge is going to make the graph disconnected.")
+            raise TransactionGraphError("Adding this edge is going to make the graph disconnected.")
 
         if not nx.is_directed_acyclic_graph(G):
-            raise Exception("Adding this edge is going to make the graph cyclic.")
+            raise TransactionGraphError("Adding this edge is going to make the graph cyclic.")
 
         self.edges.add(transactionEdge)
