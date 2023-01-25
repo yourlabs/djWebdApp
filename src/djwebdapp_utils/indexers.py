@@ -20,7 +20,7 @@ class AbstractIndexer:
 
         cls_instance = self.cls.objects.filter(
             address=instance.contract.address
-        ).first()
+        ).select_subclasses().first()
 
         if not cls_instance:
             return

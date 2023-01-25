@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'djwebdapp_example',
     'djwebdapp_multisig',
     'djwebdapp_fa2',
-    'djwebdapp_utils',
+    #'djwebdapp_utils',
 
     'rest_framework',
     'rest_framework.authtoken',

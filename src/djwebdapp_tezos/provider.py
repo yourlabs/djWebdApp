@@ -1,8 +1,10 @@
 from decimal import Decimal
 import logging
 import requests
+import traceback
 import urllib
 
+from django.db import DatabaseError, transaction as django_transaction
 from django.db.models import Q, signals
 from django.core.exceptions import ValidationError
 from pytezos.operation.result import OperationResult
