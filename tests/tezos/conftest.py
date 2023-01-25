@@ -100,13 +100,14 @@ def account5(blockchain):
 
 @pytest.fixture
 @pytest.mark.django_db
-def multisig(wait_transaction, blockchain, alice):
+def multisig(deploy_and_index, blockchain, account1):
+    from djwebdapp_multisig.models import MultisigContract
     multisig_contract = MultisigContract.objects.create(
-        admin=alice,
-        sender=alice,
+        admin=account1,
+        sender=account1,
     )
 
-    wait_transaction(multisig_contract.origination)
+    deploy_and_index(multisig_contract.origination)
 
     assert blockchain.provider.spool() is None
 

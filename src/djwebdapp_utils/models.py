@@ -57,7 +57,8 @@ def deploy_transaction(sender, instance, **kwargs):
         instance.deploy_transaction(sender, instance, **kwargs)
 
 
-@receiver(get_args)
+# done in Proxy classes .get_args()
+# @receiver(get_args)
 def async_arg(transaction, **kwargs):
     wrapped_transaction = get_associated_abstract_class(transaction, AbstractTransaction)
     if wrapped_transaction is not None:
