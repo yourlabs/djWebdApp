@@ -41,10 +41,11 @@ class TransactionGraph(models.Model):
         else:
             return None
 
-
     def add_edge(self, transactionEdge):
         if not isinstance(transactionEdge, TransactionEdge):
-            raise TransactionGraphError("Function parameters must be instance of TransactionEdge")
+            raise TransactionGraphError(
+                "Function parameters must be instance of TransactionEdge"
+            )
 
         if transactionEdge.output_node.state == 'done':
             raise TransactionGraphError("Output node is already deployed.")
@@ -57,14 +58,21 @@ class TransactionGraph(models.Model):
                 G.add_edge(edge.input_node_id, edge.output_node_id)
             else:
                 G.add_node(edge.output_node_id)
-        
-        G.add_edge(transactionEdge.input_node_id, transactionEdge.output_node_id)
+
+        G.add_edge(
+            transactionEdge.input_node_id,
+            transactionEdge.output_node_id
+        )
 
         G_undirected = G.to_undirected()
         if not nx.is_connected(G_undirected):
-            raise TransactionGraphError("Adding this edge is going to make the graph disconnected.")
+            raise TransactionGraphError(
+                "Adding this edge is going to make the graph disconnected."
+            )
 
         if not nx.is_directed_acyclic_graph(G):
-            raise TransactionGraphError("Adding this edge is going to make the graph cyclic.")
+            raise TransactionGraphError(
+                "Adding this edge is going to make the graph cyclic."
+            )
 
         self.edges.add(transactionEdge)
