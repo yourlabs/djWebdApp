@@ -29,7 +29,6 @@ class TransactionGraph(models.Model):
         G = nx.DiGraph()
         for edge in edges_qs.select_related("input_node").all():
             if edge.input_node.state != "done":
-                breakpoint()
                 G.add_edge(edge.input_node_id, edge.output_node_id)
             else:
                 G.add_node(edge.output_node_id)
