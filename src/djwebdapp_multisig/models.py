@@ -38,7 +38,7 @@ class MultisigContract(TezosContract):
 class AddAuthorizedContractCall(TezosCall):
     entrypoint = "addAuthorizedContract"
     contract_to_authorize = models.ForeignKey(
-        'djwebdapp_tezos.TezosTransaction',
+        "djwebdapp_tezos.TezosTransaction",
         on_delete=models.CASCADE,
         related_name="add_authorized_contract_calls",
         blank=True,

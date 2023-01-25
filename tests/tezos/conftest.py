@@ -107,7 +107,7 @@ def multisig(deploy_and_index, blockchain, account1):
         sender=account1,
     )
 
-    deploy_and_index(multisig_contract.origination)
+    deploy_and_index(multisig_contract)
 
     assert blockchain.provider.spool() is None
 
