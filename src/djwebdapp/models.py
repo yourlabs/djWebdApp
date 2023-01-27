@@ -353,12 +353,6 @@ class Transaction(models.Model):
         ('retrying', _('Retrying')),
         ('confirm', _('Deployed to confirm')),
         ('done', _('Confirmed finished')),
-        ('normalizing', _('Normalization aborted')),
-        ('normalization_fail', _('Normalization aborted')),
-        ('normalization_success', _('Normalization success')),
-        ('configuring', _('Normalization aborted')),
-        ('configuration_fail', _('Normalization aborted')),
-        ('configuration_success', _('Normalization success')),
     )
     normalized = models.BooleanField(
         default=False,
@@ -473,27 +467,6 @@ class Transaction(models.Model):
                 )
                 state = 'confirm'
 
-        if state == 'done':
-            if hasattr(self, 'normalize'):
-                self.state_set('normalizing')
-                with django_transaction.atomic():
-                    try:
-                        self.normalize()
-                    except Exception as e:  # noqa
-                        self.error = traceback.format_exc()
-                        self.state_set('normalization_fail')
-                    else:
-                        self.state_set('normalization_success')
-            if hasattr(self, 'configure'):
-                self.state_set('configuring')
-                with django_transaction.atomic():
-                    try:
-                        self.configure()
-                    except Exception as e:  # noqa
-                        self.error = traceback.format_exc()
-                        self.state_set('configure_fail')
-                    else:
-                        self.state_set('configure_success')
         self.state = state
         self.history.append([
             self.state,
