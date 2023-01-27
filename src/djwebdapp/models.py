@@ -558,5 +558,8 @@ class Transaction(models.Model):
 @receiver(signals.post_save)
 def dependency_graph(sender, instance, **kwargs):
     if isinstance(instance, Transaction):
-        if instance.function and instance.contract_id:
+        # contract_id are defined in blockchain specific subclasses
+        # getattr here prevents AttributeError: 'Transaction' object has no
+        # attribute 'contract_id'
+        if instance.function and getattr(instance, 'contract_id', None):
             instance.dependency_add(instance.contract)
