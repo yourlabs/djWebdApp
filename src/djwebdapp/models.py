@@ -527,3 +527,6 @@ class Transaction(models.Model):
             self.blockchain_id = self.sender.blockchain_id
 
         return super().save(*args, **kwargs)
+
+    def get_args(self):
+        return self.args
