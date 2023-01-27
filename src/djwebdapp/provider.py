@@ -57,19 +57,6 @@ class Provider:
     def get_client(self, wallet=None):
         raise NotImplementedError()
 
-    def get_args(self, transaction):
-        if getattr(transaction, 'get_args'):
-            return transaction.get_args()
-
-        results = get_args.send(
-            sender=type(self),
-            transaction=transaction,
-        )
-        for callback, result in results:
-            if result:
-                return result
-        return transaction.args
-
     @property
     def client(self):
         cached = getattr(self, '_client', None)
@@ -234,16 +221,9 @@ class Provider:
 
         if contract:
             self.logger.info(f'Deploying contract {contract}')
-            from djwebdapp_txgraph.models import TransactionEdge, TransactionGraph
-            transaction_edges = TransactionEdge.objects.filter(
-                Q(input_node=contract) | Q(output_node=contract)
-            )
-            graphs = TransactionGraph.objects.filter(
-                edges__in=transaction_edges,
-            )
-            for graph in graphs:
+            graph = contract.dependency_graph()
+            if graph:
                 contract = graph.get_next_deploy()
-                break
             contract.deploy()
             return contract
         self.logger.info('Found 0 contracts to deploy')

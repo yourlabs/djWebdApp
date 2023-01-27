@@ -6,7 +6,7 @@ from djwebdapp_fa2.models import Balance, Fa2Contract, Fa2Token
 from djwebdapp_utils.indexers import AbstractIndexer
 
 
-class Fa2Indexer(AbstractIndexer):
+class Fa2Indexer(AbstractIndexer, contract_class=Fa2Contract):
     def mint(self, fa2_contract, instance, storage, **kwargs):
         token, _ = Fa2Token.objects.update_or_create(
             contract=fa2_contract,
@@ -70,7 +70,3 @@ class Fa2Indexer(AbstractIndexer):
 
         burner_balance.amount -= instance.args["token_amount"]
         burner_balance.save()
-
-
-#post_save.connect(Fa2Indexer(Fa2Contract), sender=TezosTransaction)
-Fa2Contract.indexer_class = Fa2Indexer(Fa2Contract)

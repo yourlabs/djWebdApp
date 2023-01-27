@@ -5,6 +5,10 @@ from pytezos.operation.result import OperationResult
 
 
 class AbstractIndexer:
+    def __init_subclass__(cls, /, contract_class, **kwargs):
+        super().__init_subclass__(**kwargs)
+        contract_class.indexer_class = cls(contract_class)
+
     def __init__(self, cls):
         self.cls = cls
 

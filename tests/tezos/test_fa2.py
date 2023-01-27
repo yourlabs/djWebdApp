@@ -4,7 +4,6 @@ from rest_framework.test import APIClient
 
 from djwebdapp_fa2.models import Fa2Contract, MintCall, UpdateProxyCall
 from djwebdapp_multisig.models import AddAuthorizedContractCall
-from djwebdapp_txgraph.models import TransactionEdge, TransactionGraph
 
 
 @pytest.mark.django_db
@@ -23,14 +22,6 @@ def test_deploy_fa2(deploy_and_index, account1, account2, account3, multisig):
         contract=fa2_contract.multisig,
         state="deploy",
     )
-
-    graph = TransactionGraph.objects.create()
-    edge = TransactionEdge.objects.create(
-        input_node=fa2_contract,
-        output_node=fa2_call,
-    )
-    graph.edges.add(edge)
-
 
     assert fa2_contract == fa2_contract.blockchain.provider.spool()
     fa2_contract.blockchain.wait()
@@ -62,23 +53,14 @@ def test_deploy_fa2(deploy_and_index, account1, account2, account3, multisig):
         metadata_uri=f"ipfs://djwebdapp_nft_1",
         state='deploy',
     )
-
-    graph = TransactionGraph.objects.create()
-    edge = TransactionEdge.objects.create(
-        input_node=update_proxy,
-        output_node=mint_call,
-    )
-    graph.edges.add(edge)
+    mint_call.dependency_add(update_proxy)
 
     update_proxy.blockchain.wait_blocks()
     assert update_proxy == update_proxy.blockchain.provider.spool()
     update_proxy.blockchain.wait()
-    update_proxy.blockchain.wait_blocks()
-    update_proxy.blockchain.wait_blocks()
     update_proxy.blockchain.provider.index()
     assert mint_call == update_proxy.blockchain.provider.spool()
     update_proxy.blockchain.wait()
-    update_proxy.blockchain.wait_blocks()
     update_proxy.blockchain.provider.index()
 
     #fa2_interface.mint(mint_param).send(min_confirmations=2)

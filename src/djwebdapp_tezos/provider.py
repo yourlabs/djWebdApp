@@ -334,7 +334,7 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            args = self.get_args(transaction)
+            args = transaction.get_args()
             if isinstance(args, dict):
                 tx = method(**args)
             else:

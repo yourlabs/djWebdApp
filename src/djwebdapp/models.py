@@ -6,7 +6,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Max, signals
+from django.db.models import Q, Max, signals
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -15,6 +15,8 @@ from fernet_fields import EncryptedTextField
 from model_utils.managers import InheritanceManager
 
 from picklefield.fields import PickledObjectField
+
+from djwebdapp_txgraph.models import TransactionEdge, TransactionGraph
 
 
 SETTINGS = dict(
@@ -530,3 +532,31 @@ class Transaction(models.Model):
 
     def get_args(self):
         return self.args
+
+    def dependency_graph(self):
+        edge = TransactionEdge.objects.filter(
+            Q(input_node=self) | Q(output_node=self)
+        ).first()
+        if edge:
+            return edge.graph
+
+    def dependency_add(self, transaction):
+        """
+        Add a transaction that must be deployed before this one.
+        """
+        graph = self.dependency_graph()
+        if not graph:
+            graph = TransactionGraph.objects.create()
+        edge, _ = TransactionEdge.objects.get_or_create(
+            input_node=transaction,
+            output_node=self,
+            graph=graph,
+        )
+        return edge
+
+
+@receiver(signals.post_save)
+def dependency_graph(sender, instance, **kwargs):
+    if isinstance(instance, Transaction):
+        if instance.function and instance.contract_id:
+            instance.dependency_add(instance.contract)
