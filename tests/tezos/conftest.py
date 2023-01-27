@@ -58,6 +58,7 @@ def blockchain(head):
         )
     )
     blockchain.node_set.get_or_create(endpoint='http://tzlocal:8732')
+    blockchain.wait_blocks(1)
     return blockchain
 
 
