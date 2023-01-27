@@ -113,6 +113,7 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
         )
         contract.state_set('done')
+        contract.normalize()
 
     def is_implicit_contract(self, address):
         return len(address) == 36 and address[:2] == 'tz'
@@ -132,6 +133,7 @@ class TezosProvider(Provider):
             contract.metadata = content
             contract.number = number
             contract.state_set('done')
+            contract.normalize()
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
@@ -220,6 +222,7 @@ class TezosProvider(Provider):
 
         # save and return call
         call.state_set('done')
+        call.normalize()
 
         return call
 
@@ -331,7 +334,11 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            tx = method(*self.get_args(transaction))
+            args = self.get_args(transaction)
+            if isinstance(args, dict):
+                tx = method(**args)
+            else:
+                tx = method(*args)
             if transaction.amount:
                 tx = tx.with_amount(transaction.amount)
         except ValueError as e:

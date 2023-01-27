@@ -234,6 +234,16 @@ class Provider:
 
         if contract:
             self.logger.info(f'Deploying contract {contract}')
+            from djwebdapp_txgraph.models import TransactionEdge, TransactionGraph
+            transaction_edges = TransactionEdge.objects.filter(
+                Q(input_node=contract) | Q(output_node=contract)
+            )
+            graphs = TransactionGraph.objects.filter(
+                edges__in=transaction_edges,
+            )
+            for graph in graphs:
+                contract = graph.get_next_deploy()
+                break
             contract.deploy()
             return contract
         self.logger.info('Found 0 contracts to deploy')

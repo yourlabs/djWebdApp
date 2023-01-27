@@ -72,4 +72,5 @@ class Fa2Indexer(AbstractIndexer):
         burner_balance.save()
 
 
-post_save.connect(Fa2Indexer(Fa2Contract), sender=TezosTransaction)
+#post_save.connect(Fa2Indexer(Fa2Contract), sender=TezosTransaction)
+Fa2Contract.indexer_class = Fa2Indexer(Fa2Contract)

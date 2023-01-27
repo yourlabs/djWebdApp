@@ -32,7 +32,7 @@ class Fa2Contract(MultisigedAbstractContract):
 
         init_storage = contract_interface.storage.dummy()
         init_storage["manager"] = self.manager.address
-        init_storage["multisig"] = self.multisig.origination.address
+        init_storage["multisig"] = self.multisig.address
         init_storage["metadata"] = {
             "": self.metadata_uri.encode(),
         }
@@ -43,7 +43,7 @@ class Fa2Contract(MultisigedAbstractContract):
     def configure(self):
         AddAuthorizedContractCall.objects.create(
             sender=self.sender,
-            contract_to_authorize=self.origination,
+            contract_to_authorize=self,
             contract=self.multisig,
         )
 
@@ -74,7 +74,7 @@ class MintCall(TezosCall):
     def get_args(self):
         return {
             "token_id": self.token_id,
-            "amount_": self.amount,
+            "amount_": self.token_amount,
             "owner": self.owner.address,
             "token_metadata": {
                 "": self.metadata_uri.encode(),

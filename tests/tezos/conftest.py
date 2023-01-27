@@ -105,6 +105,7 @@ def multisig(deploy_and_index, blockchain, account1):
     multisig_contract = MultisigContract.objects.create(
         admin=account1,
         sender=account1,
+        state='deploy',
     )
 
     deploy_and_index(multisig_contract)

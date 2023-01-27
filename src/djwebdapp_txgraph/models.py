@@ -35,6 +35,9 @@ class TransactionGraph(models.Model):
         topological_sort = [node for node in nx.topological_sort(G)]
         if len(topological_sort):
             tx_id = topological_sort[0]
-            return Transaction.objects.filter(id=tx_id).first()
+            tx = Transaction.objects.filter(
+                id=tx_id,
+            ).select_subclasses().first()
+            return tx
         else:
             return None

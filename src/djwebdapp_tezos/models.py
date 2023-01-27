@@ -57,6 +57,18 @@ class TezosTransaction(Transaction):
         )
         return tx_internal_calls_qs.order_by("nonce").all()
 
+    def normalize(self):
+        if not self.contract_id:
+            return
+        try:
+            tx = TezosContract.objects.get_subclass(id=self.contract_id)
+        except TezosContract.DoesNotExist:
+            pass
+        indexer_class = getattr(type(tx), 'indexer_class', None)
+        if not indexer_class:
+            return
+        indexer_class(type(tx), instance=self)
+
 
 @receiver(signals.pre_save, sender=TezosTransaction)
 def contract_micheline(sender, instance, **kwargs):
