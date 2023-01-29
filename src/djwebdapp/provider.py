@@ -5,7 +5,6 @@ from django import db
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
-from djwebdapp.signals import get_args
 
 
 def call_deploy(arg):

@@ -1,9 +1,11 @@
 from django.db import models
 from djwebdapp.models import Account
-from djwebdapp_multisig.models import AddAuthorizedContractCall, MultisigContract
+from djwebdapp_multisig.models import (
+    AddAuthorizedContractCall,
+    MultisigContract,
+)
 
 from djwebdapp_tezos.models import TezosCall, TezosContract
-
 
 
 class MultisigedAbstractContract(TezosContract):

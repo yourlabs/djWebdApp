@@ -1,11 +1,7 @@
-from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
 from djwebdapp.models import Account
 from djwebdapp_tezos.models import TezosCall, TezosContract
-from pytezos import ContractInterface
 
 
 User = get_user_model()

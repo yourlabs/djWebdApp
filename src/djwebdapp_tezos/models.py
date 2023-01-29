@@ -59,7 +59,7 @@ class TezosTransaction(Transaction):
 
     def storage(self):
         from pytezos.operation.result import OperationResult
-        if instance.metadata:
+        if self.metadata:
             tx_op = OperationResult.from_transaction(self.metadata)
             contract = self.contract_subclass()
             if contract:
@@ -84,7 +84,7 @@ class TezosContract(TezosTransaction):
     @property
     def contract_path(self):
         if not self.contract_file_name:
-            raise Exception(f'Please contract_file_name')
+            raise Exception('Please contract_file_name')
         return os.path.join(
             self._meta.app_config.path,
             'michelson',

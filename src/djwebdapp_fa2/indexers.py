@@ -1,8 +1,6 @@
-from django.db.models.signals import post_save
 from djwebdapp.models import Account
-from djwebdapp_tezos.models import TezosTransaction
 
-from djwebdapp_fa2.models import Balance, Fa2Contract, Fa2Token
+from djwebdapp_fa2.models import Balance, Fa2Token
 from djwebdapp.normalizers import Normalizer
 
 
