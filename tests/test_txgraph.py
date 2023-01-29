@@ -1,6 +1,5 @@
 import pytest
 from djwebdapp.models import Blockchain, Transaction
-from djwebdapp_txgraph.models import TransactionEdge, TransactionGraph
 
 
 @pytest.mark.django_db
@@ -16,57 +15,26 @@ def test_get_next_deploy():
         provider_class='djwebdapp_tezos.provider.TezosProvider',
     )
 
-    tx_1 = Transaction.objects.create(blockchain=blockchain, state="deploy")
-    tx_2 = Transaction.objects.create(blockchain=blockchain, state="deploy")
-    tx_3 = Transaction.objects.create(blockchain=blockchain, state="deploy")
-    tx_4 = Transaction.objects.create(blockchain=blockchain, state="deploy")
+    tx1 = Transaction.objects.create(blockchain=blockchain, state="deploy", name='tx1')
+    tx2 = Transaction.objects.create(blockchain=blockchain, state="deploy", name='tx2')
+    tx3 = Transaction.objects.create(blockchain=blockchain, state="deploy", name='tx3')
+    tx4 = Transaction.objects.create(blockchain=blockchain, state="deploy", name='tx4')
 
-    edge_1 = TransactionEdge.objects.create(
-        input_node=tx_1,
-        output_node=tx_2,
-    )
+    tx1.dependency_add(tx2)
+    tx1.dependency_add(tx3)
+    tx2.dependency_add(tx4)
+    tx3.dependency_add(tx4)
 
-    edge_2 = TransactionEdge.objects.create(
-        input_node=tx_1,
-        output_node=tx_3,
-    )
+    assert tx1.dependency_get() == tx4
+    tx4.state = 'done'
+    tx4.save()
 
-    edge_3 = TransactionEdge.objects.create(
-        input_node=tx_2,
-        output_node=tx_4,
-    )
+    assert tx1.dependency_get() == tx2
+    tx2.state = 'done'
+    tx2.save()
 
-    edge_4 = TransactionEdge.objects.create(
-        input_node=tx_3,
-        output_node=tx_4,
-    )
+    assert tx1.dependency_get() == tx3
+    tx3.state = 'done'
+    tx3.save()
 
-    graph = TransactionGraph.objects.create()
-    graph.edges.set([edge_1, edge_2, edge_3, edge_4])
-
-    node_to_deploy = graph.get_next_deploy()
-    assert node_to_deploy == tx_1
-
-    tx_1.state = "done"
-    tx_1.save()
-
-    node_to_deploy = graph.get_next_deploy()
-    assert node_to_deploy == tx_2
-
-    tx_2.state = "done"
-    tx_2.save()
-
-    node_to_deploy = graph.get_next_deploy()
-    assert node_to_deploy == tx_3
-
-    tx_3.state = "done"
-    tx_3.save()
-
-    node_to_deploy = graph.get_next_deploy()
-    assert node_to_deploy == tx_4
-
-    tx_4.state = "done"
-    tx_4.save()
-
-    node_to_deploy = graph.get_next_deploy()
-    assert node_to_deploy == None
+    assert tx1.dependency_get() == tx1

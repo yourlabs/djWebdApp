@@ -570,7 +570,7 @@ class Transaction(models.Model):
         ).select_related('dependency')
         G = networkx.DiGraph()
         for dependency in dependencies:
-            if dependency.input_node.state == "done":
+            if dependency.dependency.state == "done":
                 G.add_node(dependency.dependent_id)
             else:
                 G.add_edge(dependency.dependency_id, dependency.dependent_id)
