@@ -571,7 +571,10 @@ class Transaction(models.Model):
             if dependency.dependency.state == "done":
                 graph.add_node(dependency.dependent_id)
             else:
-                graph.add_edge(dependency.dependency_id, dependency.dependent_id)
+                graph.add_edge(
+                    dependency.dependency_id,
+                    dependency.dependent_id,
+                )
 
         topological_sort = [node for node in networkx.topological_sort(graph)]
         if len(topological_sort):
