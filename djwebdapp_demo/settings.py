@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'djwebdapp_ethereum',
     'djwebdapp_tezos',
     'djwebdapp_example',
-    'djwebdapp_txgraph',
     'djwebdapp_multisig',
     'djwebdapp_fa2',
     #'djwebdapp_utils',
