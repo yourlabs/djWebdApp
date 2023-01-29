@@ -57,17 +57,13 @@ class TezosTransaction(Transaction):
         )
         return tx_internal_calls_qs.order_by("nonce").all()
 
-    def normalize(self):
-        if not self.contract_id:
-            return
-        try:
-            tx = TezosContract.objects.get_subclass(id=self.contract_id)
-        except TezosContract.DoesNotExist:
-            pass
-        indexer_class = getattr(type(tx), 'indexer_class', None)
-        if not indexer_class:
-            return
-        indexer_class(type(tx), instance=self)
+    def storage(self):
+        from pytezos.operation.result import OperationResult
+        if instance.metadata:
+            tx_op = OperationResult.from_transaction(self.metadata)
+            contract = self.contract_subclass()
+            if contract:
+                return contract.interface.storage.decode(tx_op.storage)
 
 
 @receiver(signals.pre_save, sender=TezosTransaction)

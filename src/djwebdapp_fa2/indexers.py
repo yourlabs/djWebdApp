@@ -3,35 +3,35 @@ from djwebdapp.models import Account
 from djwebdapp_tezos.models import TezosTransaction
 
 from djwebdapp_fa2.models import Balance, Fa2Contract, Fa2Token
-from djwebdapp_utils.indexers import AbstractIndexer
+from djwebdapp.normalizers import Normalizer
 
 
-class Fa2Indexer(AbstractIndexer, contract_class=Fa2Contract):
-    def mint(self, fa2_contract, instance, storage, **kwargs):
+class Fa2Indexer(Normalizer):
+    def mint(self, call, contract):
         token, _ = Fa2Token.objects.update_or_create(
-            contract=fa2_contract,
-            token_id=instance.args["token_id"],
+            contract=contract,
+            token_id=call.args["token_id"],
         )
         owner_account, _ = Account.objects.get_or_create(
-            blockchain=instance.blockchain,
-            address=instance.args["owner"],
+            blockchain=call.blockchain,
+            address=call.args["owner"],
         )
         Balance.objects.update_or_create(
             account=owner_account,
             token=token,
             defaults=dict(
-                amount=instance.args["amount_"],
+                amount=call.args["amount_"],
             ),
         )
 
-    def transfer(self, fa2_contract, instance, storage, **kwargs):
+    def transfer(self, call, contract):
         from_account, _ = Account.objects.get_or_create(
-            blockchain=instance.blockchain,
-            address=instance.args[0]["from_"],
+            blockchain=call.blockchain,
+            address=call.args[0]["from_"],
         )
 
-        token = fa2_contract.fa2token_set.filter(
-            token_id=instance.args[0]["txs"][0]["token_id"],
+        token = contract.fa2token_set.filter(
+            token_id=call.args[0]["txs"][0]["token_id"],
         ).first()
 
         from_balance, _ = Balance.objects.get_or_create(
@@ -39,9 +39,9 @@ class Fa2Indexer(AbstractIndexer, contract_class=Fa2Contract):
             token=token,
         )
 
-        for transfer in instance.args[0]["txs"]:
+        for transfer in call.args[0]["txs"]:
             to_account, _ = Account.objects.get_or_create(
-                blockchain=instance.blockchain,
+                blockchain=call.blockchain,
                 address=transfer["to_"],
             )
             to_balance, created = Balance.objects.get_or_create(
@@ -58,15 +58,15 @@ class Fa2Indexer(AbstractIndexer, contract_class=Fa2Contract):
 
         from_balance.save()
 
-    def burn(self, fa2_contract, instance, storage, **kwargs):
-        token = fa2_contract.fa2token_set.filter(
-            token_id=instance.args["token_id"],
+    def burn(self, call, contract):
+        token = contract.fa2token_set.filter(
+            token_id=call.args["token_id"],
         ).first()
 
         burner_balance, _ = Balance.objects.get_or_create(
-            account=instance.sender,
+            account=call.sender,
             token=token,
         )
 
-        burner_balance.amount -= instance.args["token_amount"]
+        burner_balance.amount -= call.args["token_amount"]
         burner_balance.save()

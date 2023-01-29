@@ -268,6 +268,14 @@ class Explorer(models.Model):
 
 
 class Transaction(models.Model):
+    """
+    Transaction superclass, base for all blockchain-specific classes.
+
+    .. py:attribute:: indexer_class
+
+        Class of the indexer to use.
+    """
+    indexer_class = None
     id = models.UUIDField(
         primary_key=True,
         editable=False,
@@ -574,6 +582,46 @@ class Transaction(models.Model):
                 id=tx_id,
             ).select_subclasses().first()
             return tx
+
+    def indexer_get(self):
+        if isinstance(self.indexer_class, str):
+            from .normalizers import Normalizer
+            return Normalizer._registry[self.indexer_class]
+            try:
+                indexers = getattr(self._meta.app_config.module, 'indexers')
+            except AttributeError:
+                pass
+            else:
+                return getattr(indexers, self.indexer_class)
+
+    def normalize(self):
+        """
+        Method invoked when normalizing a transaction.
+
+        By default, this relies on
+        :py:attr:`~djwebdapp.models.Transaction.indexer_class`
+        """
+        contract = self.contract_subclass()
+        if not contract:
+            return
+
+        indexer = contract.indexer_get()
+        if not indexer:
+            return
+
+        indexer.normalize(self, contract)
+
+    def contract_subclass(self):
+        """
+        Return the subclass of the `.contract` relation.
+        """
+        if not self.contract_id:
+            return
+
+        try:
+            return Transaction.objects.get_subclass(id=self.contract_id)
+        except Transaction.DoesNotExist:
+            pass
 
 
 @receiver(signals.post_save)

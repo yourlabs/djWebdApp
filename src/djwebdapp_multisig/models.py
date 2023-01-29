@@ -27,9 +27,7 @@ class MultisigContract(TezosContract):
     )
 
     def get_init_storage(self):
-        contract_interface = self.get_contract_interface()
-
-        init_storage = contract_interface.storage.dummy()
+        init_storage = self.get_contract_interface().storage.dummy()
         init_storage["admins"] = [self.admin.address]
 
         return init_storage

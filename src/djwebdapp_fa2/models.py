@@ -19,6 +19,7 @@ class MultisigedAbstractContract(TezosContract):
 
 class Fa2Contract(MultisigedAbstractContract):
     contract_file_name = "fa2.tz"
+    indexer_class = 'Fa2Indexer'
     manager = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,
@@ -28,9 +29,7 @@ class Fa2Contract(MultisigedAbstractContract):
     metadata_uri = models.CharField(max_length=500)
 
     def get_init_storage(self):
-        contract_interface = self.get_contract_interface()
-
-        init_storage = contract_interface.storage.dummy()
+        init_storage = self.get_contract_interface().storage.dummy()
         init_storage["manager"] = self.manager.address
         init_storage["multisig"] = self.multisig.address
         init_storage["metadata"] = {
