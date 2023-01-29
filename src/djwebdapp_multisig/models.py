@@ -7,8 +7,6 @@ from djwebdapp.models import Account
 from djwebdapp_tezos.models import TezosCall, TezosContract
 from pytezos import ContractInterface
 
-from djwebdapp_utils.models import AbstractContract, AbstractTransaction
-
 
 User = get_user_model()
 
