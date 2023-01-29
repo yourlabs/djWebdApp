@@ -566,14 +566,14 @@ class Transaction(models.Model):
         ).exclude(
             dependent__state='done',
         ).select_related('dependency')
-        G = networkx.DiGraph()
+        graph = networkx.DiGraph()
         for dependency in dependencies:
             if dependency.dependency.state == "done":
-                G.add_node(dependency.dependent_id)
+                graph.add_node(dependency.dependent_id)
             else:
-                G.add_edge(dependency.dependency_id, dependency.dependent_id)
+                graph.add_edge(dependency.dependency_id, dependency.dependent_id)
 
-        topological_sort = [node for node in networkx.topological_sort(G)]
+        topological_sort = [node for node in networkx.topological_sort(graph)]
         if len(topological_sort):
             tx_id = topological_sort[0]
             tx = Transaction.objects.filter(
