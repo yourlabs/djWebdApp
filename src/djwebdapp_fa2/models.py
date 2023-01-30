@@ -41,13 +41,6 @@ class Fa2Contract(MultisigedAbstractContract):
 
         return init_storage
 
-    def configure(self):
-        AddAuthorizedContractCall.objects.create(
-            sender=self.sender,
-            contract_to_authorize=self,
-            contract=self.multisig,
-        )
-
 
 class Fa2Token(models.Model):
     token_id = models.IntegerField()
