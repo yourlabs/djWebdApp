@@ -14,7 +14,7 @@ class Normalizer:
         if transaction.kind == 'function':
             callback_name = transaction.function
         elif transaction.kind == 'contract':
-            callback_name = self.deploy_method_name
+            callback_name = cls.deploy_method_name
 
         callback = getattr(normalizer, callback_name, None)
         if callback:
