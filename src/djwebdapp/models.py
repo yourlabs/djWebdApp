@@ -455,10 +455,15 @@ class Transaction(models.Model):
     def __str__(self):
         if self.name:
             return str(self.name)
+        elif self.kind == 'contract' and self.address:
+            return self.address
         elif self.hash:
             return str(self.hash)
         elif self.function:
-            return f'{self.name}.{self.function}()'
+            if self.name:
+                return f'{self.name}.{self.function}()'
+            else:
+                return f'{self.function}()'
         elif self.amount:
             return f'{self.amount}xTZ'
         else:
