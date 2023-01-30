@@ -1,3 +1,4 @@
+import mock
 import os
 import pytest
 
@@ -51,11 +52,26 @@ def test_internal_operation(client, using, blockchain):
         address=factory_addr,
     )
 
-    blockchain.provider.index()
+    # This mock is used to verify normalize() call order
+    TezosTransaction.indexer_class = mock.Mock()
 
+    blockchain.provider.index()
     contract.refresh_from_db()
     assert contract.hash
-    assert TezosTransaction.objects.get(
+
+    originated = TezosTransaction.objects.get(
         blockchain=blockchain,
         address=originated_address,
     )
+
+    internal = TezosTransaction.objects.get(
+        blockchain=blockchain,
+        hash=originated.hash,
+        contract=contract,
+    )
+
+    assert TezosTransaction.indexer_class.normalize.call_args_list == [
+        mock.call(contract, contract),
+        mock.call(internal, internal),
+        mock.call(originated, originated),
+    ]

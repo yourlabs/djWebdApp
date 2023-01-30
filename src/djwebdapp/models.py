@@ -611,17 +611,21 @@ class Transaction(models.Model):
         if not indexer:
             return
 
+        # todo: catch errors here for self.error
         indexer.normalize(self, contract)
 
     def contract_subclass(self):
         """
         Return the subclass of the `.contract` relation.
         """
+        if self.kind == 'contract':
+            return Transaction.objects.get_subclass(pk=self.pk)
+
         if not self.contract_id:
             return
 
         try:
-            return Transaction.objects.get_subclass(id=self.contract_id)
+            return Transaction.objects.get_subclass(pk=self.contract_id)
         except Transaction.DoesNotExist:
             pass
 
