@@ -593,12 +593,8 @@ class Transaction(models.Model):
         if isinstance(self.indexer_class, str):
             from .normalizers import Normalizer
             return Normalizer._registry[self.indexer_class]
-            try:
-                indexers = getattr(self._meta.app_config.module, 'indexers')
-            except AttributeError:
-                pass
-            else:
-                return getattr(indexers, self.indexer_class)
+        elif self.indexer_class:
+            return self.indexer_class
 
     def normalize(self):
         """
