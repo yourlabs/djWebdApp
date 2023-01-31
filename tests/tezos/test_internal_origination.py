@@ -29,7 +29,7 @@ def test_internal_operation(client, using, blockchain):
 
     factory = client.contract(factory_addr)
 
-    opg = factory.default().send(min_confirmations=1)
+    opg = factory.default(1).send(min_confirmations=1)
 
     # destination not available when "kind" == "origination"
     assert "destination" not in opg.opg_result["contents"][0]["metadata"]["internal_operation_results"][0]

@@ -1,4 +1,4 @@
-{ parameter unit ;
+{ parameter nat ;
   storage address ;
   code { DROP ;
          PUSH int 1 ;
