@@ -131,7 +131,6 @@ class TezosProvider(Provider):
             contract.metadata = content
             contract.number = number
             contract.state_set('done')
-            contract.normalize()
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
@@ -220,7 +219,6 @@ class TezosProvider(Provider):
 
         # save and return call
         call.state_set('done')
-        call.normalize()
 
         return call
 
@@ -260,13 +258,11 @@ class TezosProvider(Provider):
                         number=number,
                     )
 
-        # save all calls
-        source.state_set('held')
-        [tx.state_set('held') for tx in internal_transactions]
-        # call indexing signals starting with the external call
-        source.state_set('done')
-        # call indexing signals for internal tx in execution order
-        [tx.state_set('done') for tx in internal_transactions]
+        # Normalize the transaction and its internal calls here
+        # now that the caller<->callee relations have been modeled.
+        source.normalize()
+        for internal_transaction in internal_transactions:
+            internal_transaction.normalize()
 
         return source
 
