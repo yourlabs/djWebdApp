@@ -125,11 +125,14 @@ class TezosProvider(Provider):
             contract, created = self.transaction_class.objects.get_or_create(
                 address=originated_address,
                 blockchain=self.blockchain,
+                caller=caller,
             )
             contract.level = level
             contract.hash = hash
             contract.gas = content.get('fee', 0)
             contract.metadata = content
+            contract.nonce = content.get('nonce', -1)
+            contract.sender = self.get_account(content['source'])
             contract.number = number
             contract.state_set('done')
             originated_contracts.append(contract)
