@@ -55,6 +55,7 @@ def test_internal_operation(client, using, blockchain):
     # This mock is used to verify normalize() call order
     from djwebdapp.normalizers import Normalizer
     class TestNormalizer(Normalizer):
+        txs = []
         originations = []
         calls = []
         def deploy(self, transaction, contract):
@@ -65,9 +66,11 @@ def test_internal_operation(client, using, blockchain):
                 assert transaction.caller
 
             self.originations.append(transaction)
+            self.txs.append(transaction)
 
         def default(self, transaction, contract):
             self.calls.append(transaction)
+            self.txs.append(transaction)
 
             # our call to the smart contract originated
             # a new smart contract in an internal call.
@@ -81,16 +84,17 @@ def test_internal_operation(client, using, blockchain):
     contract.refresh_from_db()
     assert contract.hash
 
-    originated = TezosTransaction.objects.get(
+    internal_origination = TezosTransaction.objects.get(
         blockchain=blockchain,
         address=originated_address,
     )
 
-    internal = TezosTransaction.objects.get(
+    call = TezosTransaction.objects.get(
         blockchain=blockchain,
-        hash=originated.hash,
+        hash=internal_origination.hash,
         contract=contract,
     )
 
-    assert TestNormalizer.originations == [contract, originated]
-    assert TestNormalizer.calls == [internal]
+    assert TestNormalizer.originations == [contract, internal_origination]
+    assert TestNormalizer.calls == [call]
+    assert TestNormalizer.txs == [contract, call, internal_origination]
