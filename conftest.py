@@ -2,6 +2,10 @@ import pytest
 import os
 import sys
 
+from djwebdapp.models import Account, Blockchain
+from djwebdapp_multisig.models import MultisigContract
+from djwebdapp_tezos.models import TezosTransaction
+
 
 def evil(path, *scripts, variables=None):
     """
@@ -95,3 +99,17 @@ def admin_smoketest(admin_client):
         for url in urls:
             assert admin_client.get(url).status_code == 200
     return _
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def deploy_and_index():
+    def f(transaction, no_assert=False):
+        res = transaction.blockchain.provider.spool()
+        if not no_assert:
+            assert res == transaction
+        transaction.blockchain.wait()
+        transaction.blockchain.provider.index()
+        transaction.refresh_from_db()
+
+    return f

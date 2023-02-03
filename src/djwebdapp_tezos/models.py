@@ -66,3 +66,55 @@ def contract_micheline(sender, instance, **kwargs):
 
     interface = instance.blockchain.provider.client.contract(instance.address)
     instance.micheline = interface.to_micheline()
+
+
+class TezosContract(TezosTransaction):
+    contract_file_name = None
+
+    @property
+    def contract_path(self):
+        if not self.contract_file_name:
+            raise Exception('Please contract_file_name')
+        return os.path.join(
+            self._meta.app_config.path,
+            'michelson',
+            self.contract_file_name,
+        )
+
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        if self.contract_file_name and not self.micheline:
+            self.micheline = self.get_contract_interface().to_micheline()
+        return super().save(*args, **kwargs)
+
+    def _get_contract_name(self):
+        return self.contract_file_name.split(".")[0]
+
+    def get_contract_interface(self):
+        with open(self.contract_path) as michelson:
+            return ContractInterface.from_michelson(michelson.read())
+
+    def get_init_storage(self):
+        raise NotImplementedError
+
+    def get_michelson_storage(self):
+        contract_interface = self.get_contract_interface()
+        return contract_interface.storage.encode(self.get_init_storage())
+
+    def get_args(self):
+        return self.get_michelson_storage()
+
+
+class TezosCall(TezosTransaction):
+    entrypoint = None
+    indexer_class = None
+
+    def save(self, *args, **kwargs):
+        if not self.function:
+            self.function = self.entrypoint
+        super().save(*args, **kwargs)
+
+    class Meta:
+        proxy = True

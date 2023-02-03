@@ -1,0 +1,617 @@
+{ parameter
+    (or (or (or (address %addAdmin) (address %addAuthorizedContract))
+            (or (pair %callMultisig
+                   (pair %entrypoint_signature
+                      (pair (string %name) (bytes %params))
+                      (address %source_contract))
+                   (lambda %callback unit (list operation)))
+                (address %removeAdmin)))
+        (or (or (address %removeAuthorizedContract) (nat %setDuration)) (nat %setThreshold))) ;
+  storage
+    (pair (pair (pair (set %admins address) (set %authorized_contracts address))
+                (pair (int %duration)
+                      (big_map %n_calls
+                         (pair (pair (string %name) (bytes %params)) (address %source_contract))
+                         (pair (set address) timestamp))))
+          (nat %threshold)) ;
+  code { UNPAIR ;
+         IF_LEFT
+           { IF_LEFT
+               { IF_LEFT
+                   { SELF_ADDRESS ;
+                     SENDER ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { SELF_ADDRESS ;
+                          DIG 2 ;
+                          SELF_ADDRESS ;
+                          CONTRACT %callMultisig
+                            (pair (pair %entrypoint_signature
+                                     (pair (string %name) (bytes %params))
+                                     (address %source_contract))
+                                  (lambda %callback unit (list operation))) ;
+                          IF_NONE
+                            { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                            { SELF_ADDRESS ;
+                              DUP 5 ;
+                              PACK ;
+                              SHA256 ;
+                              PUSH string "addAdmin" ;
+                              PAIR ;
+                              PAIR ;
+                              SWAP ;
+                              PUSH mutez 0 ;
+                              DIG 5 ;
+                              DIG 5 ;
+                              PAIR ;
+                              LAMBDA
+                                (pair (pair address address) unit)
+                                (list operation)
+                                { CAR ;
+                                  UNPAIR ;
+                                  CONTRACT %addAdmin address ;
+                                  IF_NONE
+                                    { DROP ; PUSH string "no addAdmin entrypoint" ; FAILWITH }
+                                    { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                              SWAP ;
+                              APPLY ;
+                              DIG 3 ;
+                              PAIR ;
+                              TRANSFER_TOKENS ;
+                              NIL operation ;
+                              SWAP ;
+                              CONS } ;
+                          PAIR }
+                        { SWAP ;
+                          DUP ;
+                          DUG 2 ;
+                          CDR ;
+                          DUP 3 ;
+                          CAR ;
+                          CDR ;
+                          DUP 4 ;
+                          CAR ;
+                          CAR ;
+                          CDR ;
+                          DIG 4 ;
+                          CAR ;
+                          CAR ;
+                          CAR ;
+                          DIG 4 ;
+                          PUSH bool True ;
+                          SWAP ;
+                          UPDATE ;
+                          PAIR ;
+                          PAIR ;
+                          PAIR ;
+                          NIL operation ;
+                          PAIR } }
+                   { SELF_ADDRESS ;
+                     SENDER ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { SELF_ADDRESS ;
+                          DIG 2 ;
+                          SELF_ADDRESS ;
+                          CONTRACT %callMultisig
+                            (pair (pair %entrypoint_signature
+                                     (pair (string %name) (bytes %params))
+                                     (address %source_contract))
+                                  (lambda %callback unit (list operation))) ;
+                          IF_NONE
+                            { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                            { SELF_ADDRESS ;
+                              DUP 5 ;
+                              PACK ;
+                              SHA256 ;
+                              PUSH string "addAuthorizedContract" ;
+                              PAIR ;
+                              PAIR ;
+                              SWAP ;
+                              PUSH mutez 0 ;
+                              DIG 5 ;
+                              DIG 5 ;
+                              PAIR ;
+                              LAMBDA
+                                (pair (pair address address) unit)
+                                (list operation)
+                                { CAR ;
+                                  UNPAIR ;
+                                  CONTRACT %addAuthorizedContract address ;
+                                  IF_NONE
+                                    { DROP ; PUSH string "no addAuthorizedContract entrypoint" ; FAILWITH }
+                                    { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                              SWAP ;
+                              APPLY ;
+                              DIG 3 ;
+                              PAIR ;
+                              TRANSFER_TOKENS ;
+                              NIL operation ;
+                              SWAP ;
+                              CONS } ;
+                          PAIR }
+                        { SWAP ;
+                          DUP ;
+                          DUG 2 ;
+                          CDR ;
+                          DUP 3 ;
+                          CAR ;
+                          CDR ;
+                          DUP 4 ;
+                          CAR ;
+                          CAR ;
+                          CDR ;
+                          DIG 3 ;
+                          PUSH bool True ;
+                          SWAP ;
+                          UPDATE ;
+                          DIG 3 ;
+                          CAR ;
+                          CAR ;
+                          CAR ;
+                          PAIR ;
+                          PAIR ;
+                          PAIR ;
+                          NIL operation ;
+                          PAIR } } }
+               { IF_LEFT
+                   { SWAP ;
+                     DUP ;
+                     DUG 2 ;
+                     CAR ;
+                     CAR ;
+                     CAR ;
+                     SOURCE ;
+                     MEM ;
+                     NOT ;
+                     IF { DROP 2 ; PUSH nat 1001 ; FAILWITH }
+                        { SELF_ADDRESS ;
+                          SENDER ;
+                          COMPARE ;
+                          NEQ ;
+                          DUP 3 ;
+                          CAR ;
+                          CAR ;
+                          CDR ;
+                          SENDER ;
+                          MEM ;
+                          NOT ;
+                          AND ;
+                          IF { DROP 2 ; PUSH nat 1009 ; FAILWITH }
+                             { SENDER ;
+                               SWAP ;
+                               DUP ;
+                               DUG 2 ;
+                               CAR ;
+                               CDR ;
+                               COMPARE ;
+                               NEQ ;
+                               IF { DROP 2 ; PUSH nat 1012 ; FAILWITH }
+                                  { SWAP ;
+                                    DUP ;
+                                    DUG 2 ;
+                                    CAR ;
+                                    CDR ;
+                                    CDR ;
+                                    SWAP ;
+                                    DUP ;
+                                    DUG 2 ;
+                                    CAR ;
+                                    GET ;
+                                    IF_NONE
+                                      { SWAP ;
+                                        DUP ;
+                                        DUG 2 ;
+                                        CAR ;
+                                        CDR ;
+                                        CAR ;
+                                        NOW ;
+                                        ADD ;
+                                        EMPTY_SET address ;
+                                        PUSH bool True ;
+                                        SOURCE ;
+                                        UPDATE ;
+                                        PAIR }
+                                      { UNPAIR ;
+                                        DUP 4 ;
+                                        CDR ;
+                                        SWAP ;
+                                        DUP ;
+                                        DUG 2 ;
+                                        SIZE ;
+                                        COMPARE ;
+                                        GE ;
+                                        DUP 3 ;
+                                        NOW ;
+                                        COMPARE ;
+                                        GE ;
+                                        OR ;
+                                        IF { DROP 2 ;
+                                             SWAP ;
+                                             DUP ;
+                                             DUG 2 ;
+                                             CAR ;
+                                             CDR ;
+                                             CAR ;
+                                             NOW ;
+                                             ADD ;
+                                             EMPTY_SET address ;
+                                             PUSH bool True ;
+                                             SOURCE ;
+                                             UPDATE ;
+                                             PAIR }
+                                           { DUP ;
+                                             SOURCE ;
+                                             MEM ;
+                                             IF { DROP 2 ; PUSH nat 1008 ; FAILWITH }
+                                                { PUSH bool True ; SOURCE ; UPDATE ; PAIR } } } ;
+                                    UNPAIR ;
+                                    DUP 4 ;
+                                    CDR ;
+                                    SWAP ;
+                                    DUP ;
+                                    DUG 2 ;
+                                    SIZE ;
+                                    COMPARE ;
+                                    GE ;
+                                    IF { DROP 2 ;
+                                         UNIT ;
+                                         SWAP ;
+                                         DUP ;
+                                         DUG 2 ;
+                                         CDR ;
+                                         SWAP ;
+                                         EXEC ;
+                                         DUP 3 ;
+                                         CDR ;
+                                         DUP 4 ;
+                                         CAR ;
+                                         CDR ;
+                                         CDR ;
+                                         NONE (pair (set address) timestamp) ;
+                                         DIG 4 ;
+                                         CAR ;
+                                         UPDATE ;
+                                         DUP 4 ;
+                                         CAR ;
+                                         CDR ;
+                                         CAR ;
+                                         PAIR ;
+                                         DIG 3 ;
+                                         CAR ;
+                                         CAR ;
+                                         PAIR ;
+                                         PAIR ;
+                                         SWAP ;
+                                         PAIR }
+                                       { DUP 4 ;
+                                         CDR ;
+                                         DUP 5 ;
+                                         CAR ;
+                                         CDR ;
+                                         CDR ;
+                                         DIG 3 ;
+                                         DIG 3 ;
+                                         PAIR ;
+                                         SOME ;
+                                         DIG 3 ;
+                                         CAR ;
+                                         UPDATE ;
+                                         DUP 3 ;
+                                         CAR ;
+                                         CDR ;
+                                         CAR ;
+                                         PAIR ;
+                                         DIG 2 ;
+                                         CAR ;
+                                         CAR ;
+                                         PAIR ;
+                                         PAIR ;
+                                         NIL operation ;
+                                         PAIR } } } } }
+                   { SELF_ADDRESS ;
+                     SENDER ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { SELF_ADDRESS ;
+                          DIG 2 ;
+                          SELF_ADDRESS ;
+                          CONTRACT %callMultisig
+                            (pair (pair %entrypoint_signature
+                                     (pair (string %name) (bytes %params))
+                                     (address %source_contract))
+                                  (lambda %callback unit (list operation))) ;
+                          IF_NONE
+                            { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                            { SELF_ADDRESS ;
+                              DUP 5 ;
+                              PACK ;
+                              SHA256 ;
+                              PUSH string "removeAdmin" ;
+                              PAIR ;
+                              PAIR ;
+                              SWAP ;
+                              PUSH mutez 0 ;
+                              DIG 5 ;
+                              DIG 5 ;
+                              PAIR ;
+                              LAMBDA
+                                (pair (pair address address) unit)
+                                (list operation)
+                                { CAR ;
+                                  UNPAIR ;
+                                  CONTRACT %removeAdmin address ;
+                                  IF_NONE
+                                    { DROP ; PUSH string "no removeAdmin entrypoint" ; FAILWITH }
+                                    { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                              SWAP ;
+                              APPLY ;
+                              DIG 3 ;
+                              PAIR ;
+                              TRANSFER_TOKENS ;
+                              NIL operation ;
+                              SWAP ;
+                              CONS } ;
+                          PAIR }
+                        { PUSH nat 1 ;
+                          DUP 3 ;
+                          CAR ;
+                          CAR ;
+                          CAR ;
+                          SIZE ;
+                          COMPARE ;
+                          EQ ;
+                          IF { DROP 2 ; PUSH nat 1005 ; FAILWITH }
+                             { SWAP ;
+                               DUP ;
+                               DUG 2 ;
+                               CDR ;
+                               DUP 3 ;
+                               CAR ;
+                               CAR ;
+                               CAR ;
+                               SIZE ;
+                               COMPARE ;
+                               EQ ;
+                               IF { DROP 2 ; PUSH nat 1010 ; FAILWITH }
+                                  { SWAP ;
+                                    DUP ;
+                                    DUG 2 ;
+                                    CDR ;
+                                    DUP 3 ;
+                                    CAR ;
+                                    CDR ;
+                                    DUP 4 ;
+                                    CAR ;
+                                    CAR ;
+                                    CDR ;
+                                    DIG 4 ;
+                                    CAR ;
+                                    CAR ;
+                                    CAR ;
+                                    DIG 4 ;
+                                    PUSH bool False ;
+                                    SWAP ;
+                                    UPDATE ;
+                                    PAIR ;
+                                    PAIR ;
+                                    PAIR ;
+                                    NIL operation ;
+                                    PAIR } } } } } }
+           { IF_LEFT
+               { IF_LEFT
+                   { SELF_ADDRESS ;
+                     SENDER ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { SELF_ADDRESS ;
+                          DIG 2 ;
+                          SELF_ADDRESS ;
+                          CONTRACT %callMultisig
+                            (pair (pair %entrypoint_signature
+                                     (pair (string %name) (bytes %params))
+                                     (address %source_contract))
+                                  (lambda %callback unit (list operation))) ;
+                          IF_NONE
+                            { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                            { SELF_ADDRESS ;
+                              DUP 5 ;
+                              PACK ;
+                              SHA256 ;
+                              PUSH string "removeAuthorizedContract" ;
+                              PAIR ;
+                              PAIR ;
+                              SWAP ;
+                              PUSH mutez 0 ;
+                              DIG 5 ;
+                              DIG 5 ;
+                              PAIR ;
+                              LAMBDA
+                                (pair (pair address address) unit)
+                                (list operation)
+                                { CAR ;
+                                  UNPAIR ;
+                                  CONTRACT %removeAuthorizedContract address ;
+                                  IF_NONE
+                                    { DROP ; PUSH string "no removeAuthorizedContract entrypoint" ; FAILWITH }
+                                    { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                              SWAP ;
+                              APPLY ;
+                              DIG 3 ;
+                              PAIR ;
+                              TRANSFER_TOKENS ;
+                              NIL operation ;
+                              SWAP ;
+                              CONS } ;
+                          PAIR }
+                        { SWAP ;
+                          DUP ;
+                          DUG 2 ;
+                          CDR ;
+                          DUP 3 ;
+                          CAR ;
+                          CDR ;
+                          DUP 4 ;
+                          CAR ;
+                          CAR ;
+                          CDR ;
+                          DIG 3 ;
+                          PUSH bool False ;
+                          SWAP ;
+                          UPDATE ;
+                          DIG 3 ;
+                          CAR ;
+                          CAR ;
+                          CAR ;
+                          PAIR ;
+                          PAIR ;
+                          PAIR ;
+                          NIL operation ;
+                          PAIR } }
+                   { SELF_ADDRESS ;
+                     SENDER ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { SELF_ADDRESS ;
+                          DIG 2 ;
+                          SELF_ADDRESS ;
+                          CONTRACT %callMultisig
+                            (pair (pair %entrypoint_signature
+                                     (pair (string %name) (bytes %params))
+                                     (address %source_contract))
+                                  (lambda %callback unit (list operation))) ;
+                          IF_NONE
+                            { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                            { SELF_ADDRESS ;
+                              DUP 5 ;
+                              PACK ;
+                              SHA256 ;
+                              PUSH string "setDuration" ;
+                              PAIR ;
+                              PAIR ;
+                              SWAP ;
+                              PUSH mutez 0 ;
+                              DIG 5 ;
+                              DIG 5 ;
+                              PAIR ;
+                              LAMBDA
+                                (pair (pair address nat) unit)
+                                (list operation)
+                                { CAR ;
+                                  UNPAIR ;
+                                  CONTRACT %setDuration nat ;
+                                  IF_NONE
+                                    { DROP ; PUSH string "no setDuration entrypoint" ; FAILWITH }
+                                    { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                              SWAP ;
+                              APPLY ;
+                              DIG 3 ;
+                              PAIR ;
+                              TRANSFER_TOKENS ;
+                              NIL operation ;
+                              SWAP ;
+                              CONS } ;
+                          PAIR }
+                        { PUSH nat 0 ;
+                          SWAP ;
+                          DUP ;
+                          DUG 2 ;
+                          COMPARE ;
+                          EQ ;
+                          IF { DROP 2 ; PUSH nat 1013 ; FAILWITH }
+                             { SWAP ;
+                               DUP ;
+                               DUG 2 ;
+                               CDR ;
+                               DUP 3 ;
+                               CAR ;
+                               CDR ;
+                               CDR ;
+                               DIG 2 ;
+                               INT ;
+                               PAIR ;
+                               DIG 2 ;
+                               CAR ;
+                               CAR ;
+                               PAIR ;
+                               PAIR ;
+                               NIL operation ;
+                               PAIR } } } }
+               { SELF_ADDRESS ;
+                 SENDER ;
+                 COMPARE ;
+                 NEQ ;
+                 IF { SELF_ADDRESS ;
+                      DIG 2 ;
+                      SELF_ADDRESS ;
+                      CONTRACT %callMultisig
+                        (pair (pair %entrypoint_signature
+                                 (pair (string %name) (bytes %params))
+                                 (address %source_contract))
+                              (lambda %callback unit (list operation))) ;
+                      IF_NONE
+                        { SWAP ; DIG 2 ; DROP 2 ; PUSH string "no call entrypoint" ; FAILWITH }
+                        { SELF_ADDRESS ;
+                          DUP 5 ;
+                          PACK ;
+                          SHA256 ;
+                          PUSH string "setThreshold" ;
+                          PAIR ;
+                          PAIR ;
+                          SWAP ;
+                          PUSH mutez 0 ;
+                          DIG 5 ;
+                          DIG 5 ;
+                          PAIR ;
+                          LAMBDA
+                            (pair (pair address nat) unit)
+                            (list operation)
+                            { CAR ;
+                              UNPAIR ;
+                              CONTRACT %setThreshold nat ;
+                              IF_NONE
+                                { DROP ; PUSH string "no setThreshold entrypoint" ; FAILWITH }
+                                { NIL operation ; SWAP ; PUSH mutez 0 ; DIG 3 ; TRANSFER_TOKENS ; CONS } } ;
+                          SWAP ;
+                          APPLY ;
+                          DIG 3 ;
+                          PAIR ;
+                          TRANSFER_TOKENS ;
+                          NIL operation ;
+                          SWAP ;
+                          CONS } ;
+                      PAIR }
+                    { PUSH nat 0 ;
+                      SWAP ;
+                      DUP ;
+                      DUG 2 ;
+                      COMPARE ;
+                      EQ ;
+                      IF { DROP 2 ; PUSH nat 1007 ; FAILWITH }
+                         { SWAP ;
+                           DUP ;
+                           DUG 2 ;
+                           CAR ;
+                           CAR ;
+                           CAR ;
+                           SIZE ;
+                           SWAP ;
+                           DUP ;
+                           DUG 2 ;
+                           COMPARE ;
+                           GT ;
+                           IF { DROP 2 ; PUSH nat 1006 ; FAILWITH }
+                              { SWAP ; CAR ; PAIR ; NIL operation ; PAIR } } } } } } ;
+  view "get_admins"
+       unit
+       (set address)
+       { CDR ;
+         DUP ;
+         CAR ;
+         CAR ;
+         CDR ;
+         SENDER ;
+         MEM ;
+         NOT ;
+         IF { DROP ; PUSH nat 1009 ; FAILWITH } { CAR ; CAR ; CAR } } }
+

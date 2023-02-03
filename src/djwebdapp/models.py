@@ -1,12 +1,13 @@
 import binascii
 import datetime
 import importlib
+import networkx
 import time
 import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Max, signals
+from django.db.models import Q, Max, signals
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -522,3 +523,89 @@ class Transaction(models.Model):
             self.blockchain_id = self.sender.blockchain_id
 
         return super().save(*args, **kwargs)
+
+    def dependency_graph(self):
+        """
+        Return the dependency graph this transaction is part of, if any.
+        """
+        dependency = Dependency.objects.filter(
+            Q(dependent=self) | Q(dependency=self)
+        ).first()
+        if dependency:
+            return dependency.graph
+
+    def dependency_add(self, transaction):
+        """
+        Add a transaction that must be deployed before this one.
+        """
+        graph = self.dependency_graph() or self
+        dependency, _ = Dependency.objects.get_or_create(
+            dependency=transaction,
+            dependent=self,
+            graph=graph,
+        )
+        return dependency
+
+    def dependency_get(self):
+        dependencies = Dependency.objects.filter(
+            graph=self.dependency_graph(),
+        ).exclude(
+            dependent__state='done',
+        ).select_related('dependency')
+        graph = networkx.DiGraph()
+        for dependency in dependencies:
+            if dependency.dependency.state == "done":
+                graph.add_node(dependency.dependent_id)
+            else:
+                graph.add_edge(
+                    dependency.dependency_id,
+                    dependency.dependent_id,
+                )
+
+        topological_sort = [node for node in networkx.topological_sort(graph)]
+        if len(topological_sort):
+            tx_id = topological_sort[0]
+            tx = Transaction.objects.filter(
+                id=tx_id,
+            ).select_subclasses().first()
+            return tx
+
+
+@receiver(signals.post_save)
+def dependency_graph(sender, instance, **kwargs):
+    if isinstance(instance, Transaction):
+        # contract_id are defined in blockchain specific subclasses
+        # getattr here prevents AttributeError: 'Transaction' object has no
+        # attribute 'contract_id'
+        if instance.function and getattr(instance, 'contract_id', None):
+            instance.dependency_add(instance.contract)
+
+
+class Dependency(models.Model):
+    dependent = models.ForeignKey(
+        'Transaction',
+        on_delete=models.CASCADE,
+    )
+    dependency = models.ForeignKey(
+        'Transaction',
+        on_delete=models.CASCADE,
+        related_name='dependent_set',
+    )
+    # This serves purely for performance, to not have to load the full
+    # dependency table for every transaction.
+    graph = models.ForeignKey(
+        'Transaction',
+        on_delete=models.CASCADE,
+        related_name='graph',
+        help_text='The transaction this graph was created for',
+    )
+    created_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        auto_now=True,
+    )

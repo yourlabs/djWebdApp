@@ -230,6 +230,9 @@ class Provider:
         contract = self.contracts().filter(last_fail=None).first()
 
         if contract:
+            dependency = contract.dependency_get()
+            if dependency:
+                contract = dependency
             self.logger.info(f'Deploying contract {contract}')
             contract.deploy()
             return contract
