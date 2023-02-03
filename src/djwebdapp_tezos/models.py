@@ -1,3 +1,5 @@
+import os
+
 from pytezos import ContractInterface
 
 from django.db import models
@@ -54,6 +56,14 @@ class TezosTransaction(Transaction):
             sender__address=self.contract.address,
         )
         return tx_internal_calls_qs.order_by("nonce").all()
+
+    def storage(self):
+        from pytezos.operation.result import OperationResult
+        if self.metadata:
+            tx_op = OperationResult.from_transaction(self.metadata)
+            contract = self.contract_subclass()
+            if contract:
+                return contract.interface.storage.decode(tx_op.storage)
 
 
 @receiver(signals.pre_save, sender=TezosTransaction)
