@@ -268,6 +268,14 @@ class Explorer(models.Model):
 
 
 class Transaction(models.Model):
+    """
+    Transaction superclass, base for all blockchain-specific classes.
+
+    .. py:attribute:: normalizer_class
+
+        Class of the indexer to use.
+    """
+    normalizer_class = None
     id = models.UUIDField(
         primary_key=True,
         editable=False,
@@ -354,6 +362,10 @@ class Transaction(models.Model):
         ('retrying', _('Retrying')),
         ('confirm', _('Deployed to confirm')),
         ('done', _('Confirmed finished')),
+    )
+    normalized = models.BooleanField(
+        default=False,
+        help_text='Enabled when transaction is normalized',
     )
     state = models.CharField(
         choices=STATE_CHOICES,
@@ -468,6 +480,7 @@ class Transaction(models.Model):
                     f'Set {self} to confirm instead of done'
                 )
                 state = 'confirm'
+
         self.state = state
         self.history.append([
             self.state,
@@ -577,6 +590,46 @@ class Transaction(models.Model):
                 id=tx_id,
             ).select_subclasses().first()
             return tx
+
+    def normalizer_get(self):
+        if isinstance(self.normalizer_class, str):
+            from .normalizers import Normalizer
+            return Normalizer._registry[self.normalizer_class]
+        elif self.normalizer_class:
+            return self.normalizer_class
+
+    def normalize(self):
+        """
+        Method invoked when normalizing a transaction.
+
+        By default, this relies on
+        :py:attr:`~djwebdapp.models.Transaction.normalizer_class`
+        """
+        contract = self.contract_subclass()
+        if not contract:
+            return
+
+        normalizer = contract.normalizer_get()
+        if not normalizer:
+            return
+
+        # todo: catch errors here for self.error
+        normalizer.normalize(self, contract)
+
+    def contract_subclass(self):
+        """
+        Return the subclass of the `.contract` relation.
+        """
+        if self.kind == 'contract':
+            return Transaction.objects.get_subclass(pk=self.pk)
+
+        if not self.contract_id:
+            return
+
+        try:
+            return Transaction.objects.get_subclass(pk=self.contract_id)
+        except Transaction.DoesNotExist:
+            pass
 
 
 @receiver(signals.post_save)

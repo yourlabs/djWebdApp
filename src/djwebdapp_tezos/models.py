@@ -110,7 +110,7 @@ class TezosContract(TezosTransaction):
 
 class TezosCall(TezosTransaction):
     entrypoint = None
-    indexer_class = None
+    normalizer_class = None
 
     def save(self, *args, **kwargs):
         if not self.function:
