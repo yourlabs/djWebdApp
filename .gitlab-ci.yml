@@ -75,7 +75,7 @@ test:
     - "--nousb"
     - "--gcmode=archive"
   - alias: tzlocal
-    name: yourlabs/tezos
+    name: pyratzlabs/tezos:lima
   - alias: tzkt-db
     name: postgres:13
   - alias: tzkt-api
