@@ -98,3 +98,5 @@ def test_internal_operation(client, using, blockchain):
     assert TestNormalizer.originations == [contract, internal_origination]
     assert TestNormalizer.calls == [call]
     assert TestNormalizer.txs == [contract, call, internal_origination]
+
+    TezosTransaction.indexer_class = None
