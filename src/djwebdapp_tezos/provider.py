@@ -131,6 +131,21 @@ class TezosProvider(Provider):
             contract.number = number
             contract.state_set('done')
 
+    def get_account(self, address):
+        sender = Account.objects.filter(
+            address=address,
+            blockchain=self.blockchain,
+        ).first()
+
+        if not sender:
+            sender = Account.objects.create(
+                address=address,
+                blockchain=self.blockchain,
+                index=False,
+            )
+
+        return sender
+
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
         self.logger.info(f'Syncing transaction {hash}')
@@ -191,17 +206,7 @@ class TezosProvider(Provider):
 
         # update call
         call.metadata = content
-        call.sender = Account.objects.filter(
-            address=content['source'],
-            blockchain=self.blockchain,
-        ).first()
-
-        if not call.sender:
-            call.sender = Account.objects.create(
-                address=content['source'],
-                blockchain=self.blockchain,
-                index=False,
-            )
+        call.sender = self.get_account(content['source'])
 
         # patch against empty args in pytezes
         if 'parameters' in content:
