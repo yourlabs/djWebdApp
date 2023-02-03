@@ -1,4 +1,4 @@
-let main (_, _ : unit * address) : operation list * address =
+let main (_, _ : nat * address) : operation list * address =
     let op, addr = Tezos.create_contract
         (fun (p, s : int * int) -> [], p + s)
         None
