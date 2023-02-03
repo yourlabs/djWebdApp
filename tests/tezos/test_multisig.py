@@ -13,9 +13,7 @@ def test_deploy_multisig(deploy_and_index, account1):
     )
     assert multisig_contract.micheline
 
-    time.sleep(5)
     deploy_and_index(multisig_contract)
-    time.sleep(5)
 
     client = multisig_contract.sender.provider.client
     multisig_interface = client.contract(multisig_contract.address)
@@ -30,9 +28,7 @@ def test_add_authorized_contract(deploy_and_index, account1):
         state='deploy',
     )
 
-    time.sleep(5)
     deploy_and_index(multisig_contract)
-    time.sleep(5)
 
     add_authorized_contract_call = AddAuthorizedContractCall.objects.create(
         sender=account1,
@@ -41,9 +37,7 @@ def test_add_authorized_contract(deploy_and_index, account1):
         state='deploy',
     )
 
-    time.sleep(5)
     deploy_and_index(add_authorized_contract_call)
-    time.sleep(5)
 
     client = multisig_contract.sender.provider.client
     multisig_interface = client.contract(multisig_contract.address)
