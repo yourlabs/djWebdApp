@@ -5,7 +5,6 @@ from django import db
 from django.db.models import Q
 
 from djwebdapp.models import Transaction
-from djwebdapp.signals import get_args
 
 
 def call_deploy(arg):
@@ -56,16 +55,6 @@ class Provider:
 
     def get_client(self, wallet=None):
         raise NotImplementedError()
-
-    def get_args(self, transaction):
-        results = get_args.send(
-            sender=type(self),
-            transaction=transaction,
-        )
-        for callback, result in results:
-            if result:
-                return result
-        return transaction.args
 
     @property
     def client(self):

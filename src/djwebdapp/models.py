@@ -529,6 +529,9 @@ class Transaction(models.Model):
 
         return super().save(*args, **kwargs)
 
+    def get_args(self):
+        return self.args
+
     def dependency_graph(self):
         """
         Return the dependency graph this transaction is part of, if any.
