@@ -307,7 +307,7 @@ class TezosProvider(Provider):
     def originate(self, transaction):
         tx = self.client.origination(dict(
             code=transaction.micheline,
-            storage=self.get_args(transaction),
+            storage=transaction.get_args(),
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
@@ -329,7 +329,11 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            tx = method(*self.get_args(transaction))
+            args = transaction.get_args()
+            if isinstance(args, dict):
+                tx = method(**args)
+            else:
+                tx = method(*args)
             if transaction.amount:
                 tx = tx.with_amount(transaction.amount)
         except ValueError as e:

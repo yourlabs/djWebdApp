@@ -116,7 +116,7 @@ class EthereumProvider(Provider):
 
         func = funcs[0]
 
-        args = self.get_args(transaction)
+        args = transaction.get_args()
 
         for i, inp in enumerate(func.abi.get('inputs', [])):
             if inp['type'].startswith('bytes32'):
@@ -173,7 +173,7 @@ class EthereumProvider(Provider):
             bytecode=transaction.bytecode,
         )
 
-        tx = Contract.constructor(*self.get_args(transaction))
+        tx = Contract.constructor(*transaction.get_args())
         transaction.hash = self.write_transaction(transaction.sender, tx)
         receipt = self.client.eth.wait_for_transaction_receipt(
             transaction.hash)
