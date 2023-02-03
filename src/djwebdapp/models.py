@@ -33,8 +33,6 @@ SETTINGS.update(getattr(settings, 'DJBLOCKCHAIN', {}))
 class Account(models.Model):
     """
     An account address on a blockchain.
-
-    Note to confuse with :py:class:`djwebdapp_tezos.models.Wallet`.
     """
 
     name = models.CharField(
