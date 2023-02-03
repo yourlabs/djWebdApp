@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'djwebdapp_tezos',
     'djwebdapp_example',
     'djwebdapp_multisig',
+    'djwebdapp_fa2',
     'rest_framework',
     'rest_framework.authtoken',
     'djwebdapp_rest_framework',

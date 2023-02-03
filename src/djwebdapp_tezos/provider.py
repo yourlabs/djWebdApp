@@ -119,10 +119,12 @@ class TezosProvider(Provider):
                           number=None):
         self.logger.info(f'Syncing origination {hash}')
 
+        originated_contracts = []
         for originated_address in content['result']['originated_contracts']:
             contract, created = self.transaction_class.objects.get_or_create(
                 address=originated_address,
                 blockchain=self.blockchain,
+                caller=caller,
             )
             contract.level = level
             contract.hash = hash
@@ -130,6 +132,9 @@ class TezosProvider(Provider):
             contract.metadata = content
             contract.number = number
             contract.state_set('done')
+            originated_contracts.append(contract)
+
+        return originated_contracts
 
     def get_account(self, address):
         sender = Account.objects.filter(
@@ -254,21 +259,17 @@ class TezosProvider(Provider):
 
             if operation_content['kind'] == 'origination':
                 if 'originated_contracts' in operation_content['result']:
-                    self.index_origination(
+                    internal_originations = self.index_origination(
                         level,
                         op['hash'],
                         operation_content,
                         source,
                         number=number,
                     )
+                    internal_transactions += internal_originations
 
-        # save all calls
-        source.state_set('held')
-        [tx.state_set('held') for tx in internal_transactions]
-        # call indexing signals starting with the external call
-        source.state_set('done')
-        # call indexing signals for internal tx in execution order
-        [tx.state_set('done') for tx in internal_transactions]
+        # Normalize the transaction and its internal calls here
+        # now that the caller<->callee relations have been modeled.
 
         return source
 

@@ -113,3 +113,20 @@ def deploy_and_index():
         transaction.refresh_from_db()
 
     return f
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def blockchain():
+    return Blockchain.objects.create(
+        provider_class='djwebdapp.provider.Success',
+    )
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def account(blockchain):
+    return Account.objects.create(
+        address='testacc',
+        blockchain=blockchain,
+    )
