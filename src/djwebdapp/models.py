@@ -460,12 +460,12 @@ class Transaction(models.Model):
         elif self.hash:
             return str(self.hash)
         elif self.function:
-            if self.name:
-                return f'{self.name}.{self.function}()'
-            else:
-                return f'{self.function}()'
+            return f'{self.function}()'
         elif self.amount:
-            return f'{self.amount}xTZ'
+            if getattr(self, 'unit_smallest', None):
+                return f'{self.amount}{self.unit_smallest}'
+            else:
+                return f'{self.amount}'
         else:
             return str(self.pk)
 

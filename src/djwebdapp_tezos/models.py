@@ -10,6 +10,7 @@ from djwebdapp.models import Transaction
 
 
 class TezosTransaction(Transaction):
+    unit_smallest = 'xTZ'
     contract = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
