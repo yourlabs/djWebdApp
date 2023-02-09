@@ -1,4 +1,5 @@
 from multiprocessing import get_context
+import logging
 import random
 
 from django import db
@@ -279,4 +280,7 @@ def fakehash(leet):
 
 
 class Success(Provider):
-    pass
+    logger = logging.getLogger('djwebdapp_test')
+
+    def get_balance(self, address=None):
+        return 1_000_000

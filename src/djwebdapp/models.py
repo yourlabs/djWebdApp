@@ -3,6 +3,7 @@ import datetime
 import importlib
 import networkx
 import time
+import traceback
 import uuid
 
 from django.conf import settings
@@ -616,8 +617,17 @@ class Transaction(models.Model):
         if not normalizer:
             return
 
-        # todo: catch errors here for self.error
-        normalizer.normalize(self, contract)
+        try:
+            normalizer.normalize(self, contract)
+        except Exception:
+            self.sender.provider.logger.exception('Exception in normalization')
+            self.error = traceback.format_exc()
+            self.last_fail = timezone.now()
+        else:
+            self.normalized = True
+            self.error = ''
+            self.last_fail = None
+        self.save()
 
     def contract_subclass(self):
         """

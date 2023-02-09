@@ -32,11 +32,13 @@ def test_str_pk():
 
 
 @pytest.fixture
-def transaction_indexer_fail():
+def transaction_normalizer():
     class FailNormalizer(Normalizer):
+        fail = False
         @classmethod
         def deploy(cls, transaction, contract):
-            raise Exception('FailNormalizer')
+            if cls.fail:
+                raise Exception('FailNormalizer')
 
     Transaction.normalizer_class = FailNormalizer
     yield Transaction
@@ -44,8 +46,30 @@ def transaction_indexer_fail():
 
 
 @pytest.mark.django_db
-def test_normalize_error(blockchain, transaction_indexer_fail):
-    tx = transaction_indexer_fail(
-        blockchain=blockchain, kind='contract')
+def test_normalize_error(account, blockchain, transaction_normalizer):
+    tx = transaction_normalizer(
+        blockchain=blockchain,
+        kind='contract',
+        sender=account,
+    )
+    transaction_normalizer.normalizer_class.fail = True
     tx.save()
     tx.normalize()
+    assert not tx.normalized
+    assert tx.error.startswith('Traceback (most recent call')
+    assert tx.error.endswith('Exception: FailNormalizer\n')
+    assert tx.last_fail
+
+
+@pytest.mark.django_db
+def test_normalize_success(account, blockchain, transaction_normalizer):
+    tx = transaction_normalizer(
+        blockchain=blockchain,
+        kind='contract',
+        sender=account,
+    )
+    tx.save()
+    tx.normalize()
+    assert tx.normalized
+    assert not tx.error
+    assert not tx.last_fail
