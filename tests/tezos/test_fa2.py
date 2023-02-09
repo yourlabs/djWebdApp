@@ -65,6 +65,7 @@ def test_deploy_fa2(deploy_and_index, account1, account2, account3, multisig):
 
     #fa2_interface.mint(mint_param).send(min_confirmations=2)
     account1.blockchain.provider.index()
+    account1.blockchain.provider.normalize()
 
     assert fa2_contract.fa2token_set.count() == 1
     assert fa2_contract.fa2token_set.first().token_id == 0
@@ -92,6 +93,7 @@ def test_deploy_fa2(deploy_and_index, account1, account2, account3, multisig):
     fa2_interface.transfer(transfer_param).send(min_confirmations=2)
     account1.blockchain.wait_blocks()
     account1.blockchain.provider.index()
+    account1.blockchain.provider.normalize()
 
     assert fa2_contract.fa2token_set.first().balance_set.count() == 3
     assert fa2_contract.fa2token_set.first().balance_set.first().account == account1
@@ -107,5 +109,6 @@ def test_deploy_fa2(deploy_and_index, account1, account2, account3, multisig):
     fa2_interface.burn(burn_param).send(min_confirmations=2)
     account1.blockchain.wait_blocks()
     account1.blockchain.provider.index()
+    account1.blockchain.provider.normalize()
 
     assert fa2_contract.fa2token_set.first().balance_set.filter(account=account1).first().amount == 99999996

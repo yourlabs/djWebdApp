@@ -4,6 +4,7 @@ import pytest
 from pytezos import ContractInterface
 from pytezos.contract.result import OperationResult
 
+from django.core.management import call_command
 from djwebdapp_tezos.models import TezosTransaction
 
 
@@ -93,6 +94,7 @@ def test_internal_operation(client, using, blockchain):
         hash=internal_origination.hash,
         contract=contract,
     )
+    call_command('normalize')
 
     assert TestNormalizer.originations == [contract, internal_origination]
     assert TestNormalizer.calls == [call]

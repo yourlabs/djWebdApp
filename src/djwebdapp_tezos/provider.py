@@ -111,7 +111,6 @@ class TezosProvider(Provider):
             blockchain=self.blockchain,
         )
         contract.state_set('done')
-        contract.normalize()
 
     def is_implicit_contract(self, address):
         return len(address) == 36 and address[:2] == 'tz'
@@ -273,9 +272,6 @@ class TezosProvider(Provider):
 
         # Normalize the transaction and its internal calls here
         # now that the caller<->callee relations have been modeled.
-        source.normalize()
-        for internal_transaction in internal_transactions:
-            internal_transaction.normalize()
 
         return source
 

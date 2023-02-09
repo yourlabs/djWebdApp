@@ -272,6 +272,26 @@ class Provider:
             return call
         self.logger.info('Found 0 call to retry')
 
+    def normalize(self):
+        """ Run normalize on all un-normalized transactions. """
+        def normalize_internal(transaction):
+            if not transaction.normalized:
+                return
+            for internal in transaction._internal_calls.all():
+                internal.normalize()
+                normalize_internal(internal)
+
+        transactions = self.transaction_class.objects.filter(
+            normalized=False,
+            caller=None,
+        ).order_by(
+            'created_at',
+        )
+
+        for transaction in transactions:
+            transaction.normalize()
+            normalize_internal(transaction)
+
 
 def fakehash(leet):
     return f'0x{leet}5EF2D798D17e2ecB37' + str(random.randint(
