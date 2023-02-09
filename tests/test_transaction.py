@@ -38,9 +38,9 @@ def transaction_indexer_fail():
         def deploy(cls, transaction, contract):
             raise Exception('FailNormalizer')
 
-    Transaction.indexer_class = FailNormalizer
+    Transaction.normalizer_class = FailNormalizer
     yield Transaction
-    Transaction.indexer_class = None
+    Transaction.normalizer_class = None
 
 
 @pytest.mark.django_db
