@@ -88,6 +88,11 @@ class Account(models.Model):
 
     objects = InheritanceManager()
 
+    class Meta:
+        unique_together = (
+            ('blockchain', 'address'),
+        )
+
     def __str__(self):
         return self.name or self.address
 
