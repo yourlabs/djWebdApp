@@ -1,6 +1,7 @@
 import pytest
 
 from djwebdapp.models import Transaction
+from djwebdapp.normalizers import Normalizer
 
 
 def test_str_name():
@@ -28,3 +29,23 @@ def test_str_amount():
 
 def test_str_pk():
     assert str(Transaction(pk=3)) == '3'
+
+
+@pytest.fixture
+def transaction_indexer_fail():
+    class FailNormalizer(Normalizer):
+        @classmethod
+        def deploy(cls, transaction, contract):
+            raise Exception('FailNormalizer')
+
+    Transaction.indexer_class = FailNormalizer
+    yield Transaction
+    Transaction.indexer_class = None
+
+
+@pytest.mark.django_db
+def test_normalize_error(blockchain, transaction_indexer_fail):
+    tx = transaction_indexer_fail(
+        blockchain=blockchain, kind='contract')
+    tx.save()
+    tx.normalize()
