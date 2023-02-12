@@ -373,7 +373,7 @@ class Transaction(models.Model):
     )
     state = models.CharField(
         choices=STATE_CHOICES,
-        default='held',
+        default='deploy',
         max_length=200,
         db_index=True,
     )
