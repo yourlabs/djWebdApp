@@ -58,6 +58,7 @@ class TezosTransaction(Transaction):
         )
         return tx_internal_calls_qs.order_by("nonce").all()
 
+    @property
     def storage(self):
         from pytezos.operation.result import OperationResult
         if self.metadata:
