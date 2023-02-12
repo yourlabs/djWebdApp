@@ -279,7 +279,6 @@ class Provider:
                 return
             for internal in transaction._internal_calls.all():
                 internal.normalize()
-                normalize_internal(internal)
 
         transactions = self.transaction_class.objects.filter(
             normalized=False,
