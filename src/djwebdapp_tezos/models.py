@@ -1,5 +1,7 @@
 import os
 
+import dateutil.parser
+
 from pytezos import ContractInterface
 
 from django.db import models
@@ -66,6 +68,12 @@ class TezosTransaction(Transaction):
             contract = self.contract_subclass()
             if contract:
                 return contract.interface.storage.decode(tx_op.storage)
+
+    @property
+    def timestamp(self):
+        client = self.provider.client
+        timestamp_str = client.shell.blocks[self.level].header.shell()["timestamp"]
+        return dateutil.parser.isoparse(timestamp_str)
 
 
 @receiver(signals.pre_save, sender=TezosTransaction)
