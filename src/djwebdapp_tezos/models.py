@@ -88,8 +88,32 @@ def contract_micheline(sender, instance, **kwargs):
     instance.micheline = interface.to_micheline()
 
 
+class TezosContractManager(models.Manager):
+    def update_or_create(self, *args, **kwargs):
+        if "tezostransaction_ptr" not in kwargs:
+            return super().update_or_create(*args, **kwargs)
+        else:
+            defaults = kwargs["defaults"]
+            del kwargs["defaults"]
+            lookup_attributes = kwargs
+
+            instance = self.filter(**lookup_attributes).first()
+            if not instance:
+                instance = self.model(
+                    **lookup_attributes,
+                    **defaults,
+                )
+                instance.save_base(raw=True)
+                instance.refresh_from_db()
+                return instance, True
+
+            instance = self.filter(**lookup_attributes).update(**defaults)
+            return instance, False
+
+
 class TezosContract(TezosTransaction):
     contract_file_name = None
+    objects = TezosContractManager()
 
     @property
     def contract_path(self):
