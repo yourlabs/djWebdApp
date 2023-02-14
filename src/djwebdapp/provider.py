@@ -284,6 +284,7 @@ class Provider:
         transactions = self.transaction_class.objects.filter(
             normalized=False,
             caller=None,
+            state='done',
         ).order_by(
             'created_at',
         )
