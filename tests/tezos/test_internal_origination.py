@@ -80,6 +80,7 @@ def test_internal_operation(client, using, blockchain):
 
     TezosTransaction.normalizer_class = TestNormalizer
 
+    blockchain.wait_blocks()
     blockchain.provider.index()
     contract.refresh_from_db()
     assert contract.hash
