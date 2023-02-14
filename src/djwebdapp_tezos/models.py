@@ -72,8 +72,8 @@ class TezosTransaction(Transaction):
     @property
     def timestamp(self):
         client = self.provider.client
-        timestamp_str = client.shell.blocks[self.level].header.shell()["timestamp"]
-        return dateutil.parser.isoparse(timestamp_str)
+        timestamp_str = client.shell.blocks[self.level].header.shell()
+        return dateutil.parser.isoparse(timestamp_str["timestamp"])
 
 
 @receiver(signals.pre_save, sender=TezosTransaction)
