@@ -275,7 +275,7 @@ class Provider:
     def normalize(self):
         """ Run normalize on all un-normalized transactions. """
         def normalize_internal(transaction):
-            if transaction.normalized:
+            if not transaction.normalized:
                 return
             for internal in transaction._internal_calls.all():
                 internal.normalize()
