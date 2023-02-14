@@ -277,7 +277,8 @@ class Provider:
         def normalize_internal(transaction):
             if not transaction.normalized:
                 return
-            for internal in transaction._internal_calls.all():
+
+            for internal in transaction._internal_calls.order_by("nonce").all():
                 internal.normalize()
 
         transactions = self.transaction_class.objects.filter(
