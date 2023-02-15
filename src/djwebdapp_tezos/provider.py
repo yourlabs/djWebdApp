@@ -270,9 +270,6 @@ class TezosProvider(Provider):
                     )
                     internal_transactions += internal_originations
 
-        # Normalize the transaction and its internal calls here
-        # now that the caller<->callee relations have been modeled.
-
         return source
 
     def transfer(self, transaction):
