@@ -9,6 +9,7 @@ from django.db.models import signals
 from django.dispatch import receiver
 
 from djwebdapp.models import Transaction
+from djwebdapp.normalizers import Normalizer
 
 
 class TezosTransaction(Transaction):
@@ -113,6 +114,7 @@ class TezosContractManager(models.Manager):
 
 class TezosContract(TezosTransaction):
     contract_file_name = None
+    normalizer_class = Normalizer
     objects = TezosContractManager()
 
     @property
