@@ -156,10 +156,13 @@ class TezosContract(TezosTransaction):
 class TezosCall(TezosTransaction):
     entrypoint = None
     normalizer_class = None
+    target_contract = None
 
     def save(self, *args, **kwargs):
         if not self.function:
             self.function = self.entrypoint
+        if not self.contract:
+            self.contract = self.target_contract
         super().save(*args, **kwargs)
 
     class Meta:
