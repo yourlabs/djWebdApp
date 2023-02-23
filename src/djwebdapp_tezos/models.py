@@ -108,7 +108,9 @@ class TezosContractManager(models.Manager):
                 instance.refresh_from_db()
                 return instance, True
 
-            instance = self.filter(**lookup_attributes).update(**defaults)
+            self.filter(**lookup_attributes).update(**defaults)
+            instance = self.get(**lookup_attributes)
+            return instance, False
             return instance, False
 
 
