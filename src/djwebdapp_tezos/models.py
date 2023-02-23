@@ -111,6 +111,21 @@ class TezosContractManager(models.Manager):
             self.filter(**lookup_attributes).update(**defaults)
             instance = self.get(**lookup_attributes)
             return instance, False
+
+    def get_or_create(self, *args, **kwargs):
+        if "tezostransaction_ptr" not in kwargs:
+            return super().get_or_create(*args, **kwargs)
+        else:
+            instance = self.filter(**kwargs).first()
+            if not instance:
+                instance = self.model(
+                    **kwargs,
+                )
+                instance.save_base(raw=True)
+                instance.refresh_from_db()
+                return instance, True
+
+            instance = self.filter(**kwargs).first()
             return instance, False
 
 
