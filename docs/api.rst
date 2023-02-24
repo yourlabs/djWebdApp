@@ -6,3 +6,6 @@ API
 
 .. automodule:: djwebdapp_tezos.models
    :members:
+
+.. automodule:: djwebdapp.provider
+   :members:
