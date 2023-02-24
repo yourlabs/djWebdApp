@@ -34,31 +34,71 @@ def get_calls_distinct_sender(calls_query_set, n_calls):
 
 
 class Provider:
+    """
+    Base Provider class, encapsulates business logic with blockchains.
+
+    Instanciating a Provider requires either a `blockchain` or a `wallet`
+    argument.
+
+    :param blockchain: :py:class:`~djwebdapp.models.Blockchain` object to
+                       instanciate the Provider with, in which case the Python
+                       client for the blockchain will use its default account.
+
+    :param wallet: :py:class:`~djwebdapp.models.Account` object to bind the
+                    provider with, in which case the
+                    :py:attr:`~djwebdapp.models.Account.secret_key` must be set
+                    in the Account.
+
+    .. note:: You don't need to pass both `wallet` and `blockchain` arguments,
+              the provider will instanciate with the `blockchain` attribute of
+              the `wallet` argument if any.
+
+    .. danger:: Do not use this class directly, it is meant to be sub-classed
+                for each blockchain type.
+
+    .. py:attribute:: exclude_states
+
+        States to exclude when searching for transactions to deploy.
+    """
     exclude_states = (
         'held', 'aborted', 'import', 'importing', 'watching', 'done'
-    )
-    spool_states = (
-        'deleted',
-        'deploy',
-        'retrying',
     )
 
     def __init__(self, blockchain=None, wallet=None):
         self.wallet = wallet
         self.blockchain = wallet.blockchain if wallet else blockchain
 
-    def download(self, target):
-        """ Download a contract history from the configured indexer. """
+    def download(self, target: str):
+        """
+        Download a contract history from the configured indexer.
+
+        This will use an indexer such as etherscan or tzkt to download the
+        history from a web-API rather than by indexing the blockchain which
+        could take a really long while for large contracts.
+
+        :param target: String address of the contract to download history for.
+        """
         raise NotImplementedError()
 
-    def index_level(self, level):
+    def index_level(self, level: int):
+        """ Index a given block level. """
         raise NotImplementedError()
 
     def get_client(self, wallet=None):
+        """
+        Return the Python client that provider encapsulates.
+
+        :param wallet: :py:class:`~djwebdapp.models.Account` object to use,
+                        note that it *must* have a
+                        :py:attr:`~djwebdapp.models.Account.secret_key`.
+        """
         raise NotImplementedError()
 
     @property
     def client(self):
+        """
+        Cached result of :py:meth:`get_client()`
+        """
         cached = getattr(self, '_client', None)
         if cached:
             return cached
@@ -70,6 +110,10 @@ class Provider:
         self._client = value
 
     def index_init(self):
+        """
+        Query the database for transactions hashes and contract addresses to
+        index in :py:meth:`index()`
+        """
         self.hashes = self.transaction_class.objects.filter(
             blockchain=self.blockchain
         ).filter(
@@ -93,9 +137,23 @@ class Provider:
         self.logger.info(f'Found {len(self.addresses)} addresses to index')
 
     def deploy(self, transaction):
+        """
+        Deploy a given :py:class:`~djwebdapp.models.Transaction` object.
+        """
         raise NotImplementedError()
 
     def reorg(self):
+        """
+        Handle reorg if necessary.
+
+        Compare the head level with the last indexed level, if it's superior
+        then consider a reorg happened on the blockchain.
+
+        In this case, empty the level, hash, and address of every
+        :py:class:`~djwebdapp.models.Transaction` in DB which has a level
+        greater than or equal to the current head level, and set their state to
+        `deleted`.
+        """
         current_level = self.head
         reorg = (
             self.blockchain.index_level
@@ -121,6 +179,15 @@ class Provider:
             return True  # commit to reorg in a transaction
 
     def index(self):
+        """
+        Index the blockchain.
+
+        Return if :py:meth:`reorg()` returns True.
+
+        Iterate over each level from the last indexed level in the
+        :py:attr:`djwebdapp.models.Blockchain.index_level` column (or 0) up to
+        the current head level. Call :py:meth:`index_level()` for each level.
+        """
         if self.reorg():
             return  # commit to reorg in a transaction
 
@@ -303,7 +370,7 @@ class Provider:
             Address to get the balance of, use the current client address by
             default.
         """
-        raise NotImplementedError('This method needs to be implemented by subclasses')
+        raise NotImplementedError()
 
 
 def fakehash(leet):
