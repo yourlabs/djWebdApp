@@ -278,6 +278,17 @@ class TransactionManager(InheritanceManager):
             self.model._meta.get_parent_list()[0]
         ).name
 
+    def find_or_create(self, lookup_attributes, defaults=None):
+        instance = self.filter(**lookup_attributes).first()
+        if not instance:
+            instance = self.model(
+                **lookup_attributes,
+                **(defaults or {}),
+            )
+            instance.save_base(raw=True, force_insert=True)
+            instance.refresh_from_db()
+            return instance, True
+
     def update_or_create(self, *args, **kwargs):
         if self.parent_fk_column not in kwargs:
             return super().update_or_create(*args, **kwargs)
@@ -286,15 +297,8 @@ class TransactionManager(InheritanceManager):
         del kwargs["defaults"]
         lookup_attributes = kwargs
 
-        instance = self.filter(**lookup_attributes).first()
-        if not instance:
-            instance = self.model(
-                **lookup_attributes,
-                **defaults,
-            )
-            instance.save_base(raw=True, force_insert=True)
-            instance.refresh_from_db()
-            return instance, True
+        if instance := self.find_or_create(lookup_attributes, defaults):
+            return instance
 
         self.filter(**lookup_attributes).update(**defaults)
         instance = self.get(**lookup_attributes)
@@ -304,14 +308,8 @@ class TransactionManager(InheritanceManager):
         if self.parent_fk_column not in kwargs:
             return super().get_or_create(*args, **kwargs)
 
-        instance = self.filter(**kwargs).first()
-        if not instance:
-            instance = self.model(
-                **kwargs,
-            )
-            instance.save_base(raw=True, force_insert=True)
-            instance.refresh_from_db()
-            return instance, True
+        if instance := self.find_or_create(kwargs):
+            return instance
 
         instance = self.filter(**kwargs).first()
         return instance, False
