@@ -294,6 +294,17 @@ class Provider:
             transaction.normalize()
             normalize_internal(transaction)
 
+    def get_balance(self, address=None):
+        """
+        Query the blockchain and return the balance of an address.
+
+        .. py:attribute:: address
+
+            Address to get the balance of, use the current client address by
+            default.
+        """
+        raise NotImplementedError('This method needs to be implemented by subclasses')
+
 
 def fakehash(leet):
     return f'0x{leet}5EF2D798D17e2ecB37' + str(random.randint(

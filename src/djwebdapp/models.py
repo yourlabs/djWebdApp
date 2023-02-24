@@ -33,7 +33,45 @@ SETTINGS.update(getattr(settings, 'DJBLOCKCHAIN', {}))
 
 class Account(models.Model):
     """
-    An account address on a blockchain.
+    A blockchain account.
+
+    .. py:attribute:: name
+
+        Optionnal name for this account.
+
+    .. py:attribute:: description
+
+        Optionnal description for this account.
+
+    .. py:attribute:: created_at
+
+        Automatic datetime of the creation of this account in the database.
+
+    .. py:attribute:: updated_at
+
+        Automatic datetime of the last update of this account in the database.
+
+    .. py:attribute:: address
+
+        Account address on the blockchain.
+
+    .. py:attribute:: blockchain
+
+        Foreign key to the :py:class:`~Blockchain` model this account is
+        related to.
+
+    .. py:attribute:: balance
+
+        Decimal balance of this account, updated by the
+        :py:meth:`~refresh_balance()` method. with the `refresh_balances`
+        management command. Uses
+
+    .. py:attribute:: owner
+    .. py:attribute:: secret_key
+    .. py:attribute:: revealed
+    .. py:attribute:: counter
+    .. py:attribute:: last_level
+    .. py:attribute:: index
     """
 
     name = models.CharField(
