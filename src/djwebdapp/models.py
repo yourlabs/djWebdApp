@@ -271,6 +271,52 @@ class Explorer(models.Model):
     )
 
 
+class TransactionManager(InheritanceManager):
+    @property
+    def parent_fk_column(self):
+        return self.model._meta.get_ancestor_link(
+            self.model._meta.get_parent_list()[0]
+        ).name
+
+    def update_or_create(self, *args, **kwargs):
+        if self.parent_fk_column not in kwargs:
+            return super().update_or_create(*args, **kwargs)
+        else:
+            defaults = kwargs["defaults"]
+            del kwargs["defaults"]
+            lookup_attributes = kwargs
+
+            instance = self.filter(**lookup_attributes).first()
+            if not instance:
+                instance = self.model(
+                    **lookup_attributes,
+                    **defaults,
+                )
+                instance.save_base(raw=True)
+                instance.refresh_from_db()
+                return instance, True
+
+            self.filter(**lookup_attributes).update(**defaults)
+            instance = self.get(**lookup_attributes)
+            return instance, False
+
+    def get_or_create(self, *args, **kwargs):
+        if self.parent_fk_column not in kwargs:
+            return super().get_or_create(*args, **kwargs)
+        else:
+            instance = self.filter(**kwargs).first()
+            if not instance:
+                instance = self.model(
+                    **kwargs,
+                )
+                instance.save_base(raw=True)
+                instance.refresh_from_db()
+                return instance, True
+
+            instance = self.filter(**kwargs).first()
+            return instance, False
+
+
 class Transaction(models.Model):
     """
     Transaction superclass, base for all blockchain-specific classes.
@@ -446,7 +492,7 @@ class Transaction(models.Model):
         default=True,
         help_text='Wether the indexer should index all transactions or not',
     )
-    objects = InheritanceManager()
+    objects = TransactionManager()
 
     class Meta:
         unique_together = (

@@ -89,50 +89,9 @@ def contract_micheline(sender, instance, **kwargs):
     instance.micheline = interface.to_micheline()
 
 
-class TezosContractManager(models.Manager):
-    def update_or_create(self, *args, **kwargs):
-        if "tezostransaction_ptr" not in kwargs:
-            return super().update_or_create(*args, **kwargs)
-        else:
-            defaults = kwargs["defaults"]
-            del kwargs["defaults"]
-            lookup_attributes = kwargs
-
-            instance = self.filter(**lookup_attributes).first()
-            if not instance:
-                instance = self.model(
-                    **lookup_attributes,
-                    **defaults,
-                )
-                instance.save_base(raw=True)
-                instance.refresh_from_db()
-                return instance, True
-
-            self.filter(**lookup_attributes).update(**defaults)
-            instance = self.get(**lookup_attributes)
-            return instance, False
-
-    def get_or_create(self, *args, **kwargs):
-        if "tezostransaction_ptr" not in kwargs:
-            return super().get_or_create(*args, **kwargs)
-        else:
-            instance = self.filter(**kwargs).first()
-            if not instance:
-                instance = self.model(
-                    **kwargs,
-                )
-                instance.save_base(raw=True)
-                instance.refresh_from_db()
-                return instance, True
-
-            instance = self.filter(**kwargs).first()
-            return instance, False
-
-
 class TezosContract(TezosTransaction):
     contract_file_name = None
     normalizer_class = Normalizer
-    objects = TezosContractManager()
 
     @property
     def contract_path(self):
@@ -181,28 +140,6 @@ class TezosCall(TezosTransaction):
         if not self.contract:
             self.contract = self.target_contract
         super().save(*args, **kwargs)
-
-    def update_or_create(self, *args, **kwargs):
-        if "tezostransaction_ptr" not in kwargs:
-            return super().update_or_create(*args, **kwargs)
-        else:
-            defaults = kwargs["defaults"]
-            del kwargs["defaults"]
-            lookup_attributes = kwargs
-
-            instance = self.filter(**lookup_attributes).first()
-            if not instance:
-                instance = self.model(
-                    **lookup_attributes,
-                    **defaults,
-                )
-                instance.save_base(raw=True)
-                instance.refresh_from_db()
-                return instance, True
-
-            self.filter(**lookup_attributes).update(**defaults)
-            instance = self.get(**lookup_attributes)
-            return instance, False
 
     class Meta:
         proxy = True
