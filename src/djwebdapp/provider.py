@@ -253,7 +253,7 @@ class Provider:
             level += 1
         self.blockchain.save()
 
-    def contracts(self):
+    def spool_contracts(self):
         """
         Return the contracts to deploy, used by :py:meth:`~spool()`.
 
@@ -297,7 +297,7 @@ class Provider:
             'created_at'
         ).select_subclasses()
 
-    def calls(self):
+    def spool_calls(self):
         """
         Return the calls to deploy in :py:meth:`~spool()`.
 
@@ -337,7 +337,7 @@ class Provider:
             'created_at'
         ).select_subclasses()
 
-    def transfers(self):
+    def spool_transfers(self):
         """
         Return the transfers to deploy, used by :py:meth:`~spool()`.
 
@@ -384,14 +384,14 @@ class Provider:
         # senders which have already deployed during this block must be
         # excluded
         # is there any new transfer to deploy from an account with balance?
-        transfer = self.transfers().filter(last_fail=None).first()
+        transfer = self.spool_transfers().filter(last_fail=None).first()
         if transfer:
             self.logger.info(f'Deploying transfer {transfer}')
             return transfer.deploy()
         self.logger.info('Found 0 transfers to deploy')
 
         # is there any new contract to deploy from an account with balance?
-        contract = self.contracts().filter(last_fail=None).first()
+        contract = self.spool_contracts().filter(last_fail=None).first()
 
         if contract:
             dependency = contract.dependency_get()
@@ -403,7 +403,7 @@ class Provider:
         self.logger.info('Found 0 contracts to deploy')
 
         n_calls = 15
-        calls = self.calls().filter(last_fail=None)
+        calls = self.spool_calls().filter(last_fail=None)
         distinct_calls = get_calls_distinct_sender(calls, n_calls)
 
         if distinct_calls:
@@ -423,7 +423,7 @@ class Provider:
         self.logger.info('Found 0 calls to send')
 
         # is there any transfer to retry from an account with balance?
-        transfer = self.transfers().order_by('last_fail').first()
+        transfer = self.spool_transfers().order_by('last_fail').first()
         if transfer:
             self.logger.info(f'Retrying transfer {transfer}')
             transfer.deploy()
@@ -431,7 +431,7 @@ class Provider:
         self.logger.info('Found 0 transfer to retry')
 
         # any contract to retry?
-        contract = self.contracts().order_by('last_fail').first()
+        contract = self.spool_contracts().order_by('last_fail').first()
         if contract:
             self.logger.info(f'Retrying contract {contract}')
             contract.deploy()
@@ -439,7 +439,7 @@ class Provider:
         self.logger.info('Found 0 contract to retry')
 
         # any call to retry?
-        call = self.calls().order_by('last_fail').first()
+        call = self.spool_calls().order_by('last_fail').first()
         if call:
             self.logger.info(f'Retrying function {call}')
             call.deploy()

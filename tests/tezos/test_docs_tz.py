@@ -90,7 +90,7 @@ def test_confirm(include, blockchain):
 
     # let's ensure it's not accounted for to spool anymore
     provider = copy.deepcopy(contract.blockchain.provider)
-    assert contract not in provider.contracts()
+    assert contract not in provider.spool_contracts()
 
     # indexing again after only one block should not change state to done
     contract.blockchain.wait_blocks(1)
