@@ -9,6 +9,11 @@ from djwebdapp.models import Transaction
 
 
 def call_deploy(arg):
+    """
+    Wrap a call in a try/except with logging.
+
+    :param arg: Tuple of (logger, call)
+    """
     logger, call = arg
 
     logger.debug(f'starting {call} ...')
@@ -23,6 +28,12 @@ def call_deploy(arg):
 
 
 def get_calls_distinct_sender(calls_query_set, n_calls):
+    """
+    Given a QS of calls, return a list of calls with distinct senders.
+
+    :param calls_query_set: Queryset of Calls
+    :param n_calls: Number of calls to return
+    """
     senders = set()
     distinct_calls = []
     for call in calls_query_set:
@@ -53,8 +64,32 @@ class Provider:
               the provider will instanciate with the `blockchain` attribute of
               the `wallet` argument if any.
 
-    .. danger:: Do not use this class directly, it is meant to be sub-classed
-                for each blockchain type.
+    .. py:attribute:: blockchain
+
+        :py:class:`~djwebdapp.models.Blockchain` this provider was instanciated
+        for.
+
+    .. py:attribute:: account
+
+        :py:class:`~djwebdapp.models.Account` this provider was instanciated
+        for, if any.
+
+        .. danger:: When instanciating a provider with a :py:attr:`wallet`,
+                    make sure the :py:class:`~djwebdapp.models.Account` has a
+                    secret key! Otherwise, the blockchain client will not be
+                    able to send any transaction!
+
+    .. py:attribute:: transaction_class
+
+        :py:class:`~djwebdapp.models.Transaction` subclass this provider works
+        with. For example, :py:class:`~djwebdapp_tezos.models.TezosTransaction`
+        if it's a tezos provider, or a
+        :py:class:`~djwebdapp_ethereum.models.EthereumTransaction` if it's an
+        ethereum provider. This is supposed to be set as a class attribute by
+        the provider subclass.
+
+    .. warning:: Do not use this class directly, it is meant to be sub-classed
+                 for each blockchain type.
 
     .. py:attribute:: exclude_states
 
@@ -81,7 +116,11 @@ class Provider:
         raise NotImplementedError()
 
     def index_level(self, level: int):
-        """ Index a given block level. """
+        """
+        Index a given block level.
+
+        Left to implement in new provider subclasses.
+        """
         raise NotImplementedError()
 
     def get_client(self, wallet=None):
@@ -113,6 +152,8 @@ class Provider:
         """
         Query the database for transactions hashes and contract addresses to
         index in :py:meth:`index()`
+
+        Provisions
         """
         self.hashes = self.transaction_class.objects.filter(
             blockchain=self.blockchain
@@ -213,6 +254,27 @@ class Provider:
         self.blockchain.save()
 
     def contracts(self):
+        """
+        Return the contracts to deploy, used by :py:meth:`~spool()`.
+
+        Return a QuerySet of :py:attr:`transaction_class` objects of this
+        :py:attr:`blockchain` which:
+
+        - are of :py:attr:`~djwebdapp.models.Transaction.kind` ``contract``
+        - have no :py:attr:`~djwebdapp.models.Transaction.hash`
+        - have code according to
+          :py:attr:`~djwebdapp.models.Transaction.has_code`, so that we can
+          actually deploy it
+        - have no :py:attr:`~djwebdapp.models.Transaction.address`
+        - which :py:attr:`~djwebdapp.models.Transaction.state` is not in
+          :py:attr:`exclude_states`,
+        - which sender :py:class:`~djwebdapp.models.Account` have not deployed
+          to the blockchain during this level according to :py:attr:`head` and
+          :py:attr:`djwebdapp.models.Account.last_level`
+        - which sender has balance above 0
+        - ordered by :py:attr:`~djwebdapp.models.Transaction.created_at`
+          ascending order, so that it gets the oldest first.
+        """
         return self.transaction_class.objects.filter(
             blockchain=self.blockchain,
             kind='contract',
@@ -236,6 +298,25 @@ class Provider:
         ).select_subclasses()
 
     def calls(self):
+        """
+        Return the calls to deploy in :py:meth:`~spool()`.
+
+        Return a QuerySet of :py:attr:`transaction_class` objects of this
+        :py:attr:`blockchain` which:
+
+        - are of :py:attr:`~djwebdapp.models.Transaction.kind` ``function``
+        - have no :py:attr:`~djwebdapp.models.Transaction.hash`
+        - are related to a contract which does have an
+          :py:attr:`~djwebdapp.models.Transaction.address`
+        - which :py:attr:`~djwebdapp.models.Transaction.state` is not in
+          :py:attr:`exclude_states`,
+        - which sender :py:class:`~djwebdapp.models.Account` have not deployed
+          to the blockchain during this level according to :py:attr:`head` and
+          :py:attr:`djwebdapp.models.Account.last_level`
+        - which sender has balance above 0
+        - ordered by :py:attr:`~djwebdapp.models.Transaction.created_at`
+          ascending order, so that it gets the oldest first.
+        """
         return self.transaction_class.objects.filter(
             blockchain=self.blockchain,
             kind='function',
@@ -257,6 +338,23 @@ class Provider:
         ).select_subclasses()
 
     def transfers(self):
+        """
+        Return the transfers to deploy, used by :py:meth:`~spool()`.
+
+        Return a QuerySet of :py:attr:`transaction_class` objects of this
+        :py:attr:`blockchain` which:
+
+        - are of :py:attr:`~djwebdapp.models.Transaction.kind` ``transfer``
+        - have no :py:attr:`~djwebdapp.models.Transaction.hash`
+        - which :py:attr:`~djwebdapp.models.Transaction.state` is not in
+          :py:attr:`exclude_states`,
+        - which sender :py:class:`~djwebdapp.models.Account` have not deployed
+          to the blockchain during this level according to :py:attr:`head` and
+          :py:attr:`djwebdapp.models.Account.last_level`
+        - which sender has balance above 0
+        - ordered by :py:attr:`~djwebdapp.models.Transaction.created_at`
+          ascending order, so that it gets the oldest first.
+        """
         return self.transaction_class.objects.filter(
             blockchain=self.blockchain,
             kind='transfer',
@@ -274,6 +372,15 @@ class Provider:
         )
 
     def spool(self):
+        """
+        The spool method deploys the next transaction of any kind and return it.
+
+        It checks for the next transaction with the following logic:
+
+        - :py:meth:`~transfers()`: is there any new transfer to deploy?
+        - :py:meth:`~contracts()`: is there any *new* contract to deploy from
+          an account with balance?
+        """
         # senders which have already deployed during this block must be
         # excluded
         # is there any new transfer to deploy from an account with balance?
