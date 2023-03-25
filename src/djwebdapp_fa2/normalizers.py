@@ -4,7 +4,7 @@ from djwebdapp_fa2.models import Balance, Fa2Token
 from djwebdapp.normalizers import Normalizer
 
 
-class Fa2Indexer(Normalizer):
+class Fa2Normalizer(Normalizer):
     def mint(self, call, contract):
         token, _ = Fa2Token.objects.update_or_create(
             contract=contract,

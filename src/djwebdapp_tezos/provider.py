@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from pytezos.operation.result import OperationResult
 
 from djwebdapp.exceptions import PermanentError
-from djwebdapp.models import Account, setup
+from djwebdapp.models import Account, account_setup
 from djwebdapp.provider import Provider
 
 from djwebdapp_tezos.models import TezosTransaction
@@ -273,8 +273,11 @@ class TezosProvider(Provider):
         return source
 
     def transfer(self, transaction):
+        """ Execute a transfer transaction. """
+
         """
         rpc error if balance too low :
+
         RpcError ({'amount': '120000000000000000',
               'balance': '3998464237867',
               'contract': 'tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN',
@@ -395,7 +398,7 @@ class TezosProvider(Provider):
             operations[key] = operation
 
         # disable automatic refresh of balances to speed up the whole process
-        signals.pre_save.disconnect(setup, sender=Account)
+        signals.pre_save.disconnect(account_setup, sender=Account)
         # we're also going to cache Account objects
         accounts = dict()
 
@@ -460,4 +463,4 @@ class TezosProvider(Provider):
             call.state_set('done')
 
         # reconnect Account signal
-        signals.pre_save.connect(setup, sender=Account)
+        signals.pre_save.connect(account_setup, sender=Account)

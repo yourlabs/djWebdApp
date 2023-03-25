@@ -170,3 +170,18 @@ Deploy a contract
 
 .. literalinclude:: ../src/djwebdapp_example/ethereum/deploy_contract.py
   :language: Python
+
+API
+===
+
+Models
+------
+
+.. automodule:: djwebdapp_ethereum.models
+   :members:
+
+Provider
+--------
+
+.. automodule:: djwebdapp_ethereum.provider
+   :members:

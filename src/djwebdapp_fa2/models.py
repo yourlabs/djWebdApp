@@ -18,7 +18,7 @@ class MultisigedAbstractContract(TezosContract):
 
 class Fa2Contract(MultisigedAbstractContract):
     contract_file_name = "fa2.tz"
-    normalizer_class = 'Fa2Indexer'
+    normalizer_class = 'Fa2Normalizer'
     manager = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,

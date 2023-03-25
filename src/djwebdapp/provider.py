@@ -51,6 +51,9 @@ class Provider:
     Instanciating a Provider requires either a `blockchain` or a `wallet`
     argument.
 
+    .. warning:: Do not use this class directly, it is meant to be sub-classed
+                 for each blockchain type.
+
     :param blockchain: :py:class:`~djwebdapp.models.Blockchain` object to
                        instanciate the Provider with, in which case the Python
                        client for the blockchain will use its default account.
@@ -87,9 +90,6 @@ class Provider:
         :py:class:`~djwebdapp_ethereum.models.EthereumTransaction` if it's an
         ethereum provider. This is supposed to be set as a class attribute by
         the provider subclass.
-
-    .. warning:: Do not use this class directly, it is meant to be sub-classed
-                 for each blockchain type.
 
     .. py:attribute:: exclude_states
 
@@ -447,7 +447,15 @@ class Provider:
         self.logger.info('Found 0 call to retry')
 
     def normalize(self):
-        """ Run normalize on all un-normalized transactions. """
+        """
+        Run `normalize()` on all un-normalized transactions.
+
+        Call
+        :py:meth:`~djwebdapp.models.Transaction.normalize()`
+        on each transaction that has not been normalized.
+
+        Internal transactions are normalized after their caller is normalized.
+        """
         def normalize_internal(transaction):
             if not transaction.normalized:
                 return

@@ -185,3 +185,18 @@ Deploy a smart contract
 
 .. literalinclude:: ../src/djwebdapp_example/tezos/deploy_contract.py
   :language: Python
+
+API
+===
+
+Models
+------
+
+.. automodule:: djwebdapp_tezos.models
+   :members:
+
+Provider
+--------
+
+.. automodule:: djwebdapp_tezos.provider
+   :members:
