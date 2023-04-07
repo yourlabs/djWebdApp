@@ -112,34 +112,47 @@ You can also use the ``./manage.py history_download`` command.
 Normalizing incomming data: Models
 ----------------------------------
 
-We have created example models in the ``src/djwebdapp_example`` directory:
+Normalization is the process of transforming incomming data into structured
+relational data. While barely indexing transaction data from the blockchain may
+be enough for some simple use cases, usually you'll need to normalize that data
+into a structured relational database: your own models.
 
-.. literalinclude:: ../src/djwebdapp_example/models.py
+In djwebdapp, you're going to make a :py:class:`~djwebdapp.models.Transaction`
+subclass to represent your Contracts and Contract calls, this will help making
+specific endpoints and build a rich web frontend.
+
+However, for complex smart contract architectures, you're going to be writting
+a lot of code to process incomming data into normalized models. This code will
+have to be somewhere, and normalizers are the elegant solution solution
+provided by djwebdapp.
+
+You can subclass the base :py:class:`Normalizer` class for each of your smart
+contracts, if you have, like in our examples, an
+:py:class:`djwebdapp_fa2.models.Fa2Contract` model, then a bunch of things can
+happen on the blockchain such as ``mint()``, ``transfer()`` or ``burn()`` calls.
+
+In this case, you should subclass :py:class:`Normalizer` into a new
+:py:class:`~djwebdapp_fa2.normalizers.Fa2Normalizer` class that you'd declare
+in your app's ``normalizers`` module, in our case ``djwebdapp_fa2.normalizers``, so
+that it's automatically discovered by ``djwebdapp`` which will attempt to import
+the ``normalizers`` module of each installed app.
+
+Then, all you have to do is add ``normalizer_class`` attribute to your Model
+class, in our case ``normalizer_class = "Fa2Normalizer"``, this maps the
+``Fa2Contract`` method calls to ``Fa2Normalizer``.
+
+Then, call :py:meth:`djwebdapp.provider.Provider.normalize()` method, ie. as
+``blockchain.provider.normalize()`` or the ``./manage.py normalize`` command
+which you can run in a bash while loop.
+
+We have created example models in the ``src/djwebdapp_fa2`` directory:
+
+.. literalinclude:: ../src/djwebdapp_fa2/models.py
   :language: Python
 
-.. note:: You wouldn't have to declare ForeignKeys to other Transaction classes
-          than TezosTransactions, but we'll learn to do inter-blockchain
-          mirroring later in this tutorial, so that's why we have relations to
-          both.
+And an example ``normalizers.py``;
 
-And declared a function to update the balance of an FA12 contract:
-
-.. literalinclude:: ../src/djwebdapp_example/balance_update.py
-  :language: Python
-
-Normalizing incomming data: Signals
------------------------------------
-
-Finally, to connect the dots, we are first going to connect a custom callback
-to ``djwebdapp_tezos.models.TezosTransaction``'s ``post_save`` signal to create
-normalized ``Mint`` objects for every ``mint()`` call we index:
-
-.. literalinclude:: ../src/djwebdapp_example/tezos/mint_normalize.py
-  :language: Python
-
-We are now ready to normalize the smart contract we have indexed:
-
-.. literalinclude:: ../src/djwebdapp_example/tezos/normalize.py
+.. literalinclude:: ../src/djwebdapp_fa2/normalizers.py
   :language: Python
 
 Vault
