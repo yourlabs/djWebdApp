@@ -123,7 +123,7 @@ class EthereumProvider(Provider):
                 args[i] = self.client.toBytes(hexstr=args[i])
 
         tx = func(*args)
-        self.write_transaction(transaction.sender, tx)
+        transaction.hash = self.write_transaction(transaction.sender, tx)
 
     def deploy(self, transaction):
         self.logger.debug(f'{transaction}.deploy(): start')

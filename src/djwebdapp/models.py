@@ -936,6 +936,9 @@ class Transaction(models.Model):
         if not self.blockchain_id and self.sender_id:
             self.blockchain_id = self.sender.blockchain_id
 
+        if not self.blockchain_id and self.contract_id:
+            self.blockchain_id = self.contract.blockchain_id
+
         return super().save(*args, **kwargs)
 
     def get_args(self):

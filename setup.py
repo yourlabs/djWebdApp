@@ -2,9 +2,6 @@ from setuptools import setup, find_packages
 
 
 extras_require = dict(
-    vault=[
-        'mnemonic',
-    ],
     test=[
         'django',
         'djangorestframework',
@@ -45,6 +42,7 @@ setup(
         'django-picklefield>=3.0.1',
         'pymich>=0.9.8',
         'networkx==2.8.8',
+        'mnemonic',
     ],
     extras_require=extras_require,
     author='James Pic',
