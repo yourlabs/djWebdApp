@@ -677,10 +677,11 @@ class Transaction(models.Model):
         'Blockchain',
         on_delete=models.CASCADE,
     )
-    level = models.PositiveIntegerField(
-        db_index=True,
+    block = models.ForeignKey(
+        'Block',
         null=True,
         blank=True,
+        on_delete=models.SET_NULL,
     )
     hash = models.CharField(
         max_length=255,
@@ -1123,3 +1124,29 @@ class Dependency(models.Model):
         blank=True,
         auto_now=True,
     )
+
+
+class Block(models.Model):
+    blockchain = models.ForeignKey(
+        'Blockchain',
+        on_delete=models.CASCADE,
+    )
+    level = models.PositiveIntegerField(
+        db_index=True,
+    )
+    hash = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+    removed = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='True if this block was removed during reorg',
+    )
+
+    class Meta:
+        ordering = ('level',)
+        unique_together = (
+            ('level', 'blockchain'),
+        )

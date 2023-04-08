@@ -238,8 +238,8 @@ class Provider:
         level = self.blockchain.transaction_set.filter(
             state='confirm'
         ).aggregate(
-            Min('level')
-        )['level__min']
+            Min('block__level')
+        )['block__level__min']
         if not level:
             if self.blockchain.index_level:
                 level = self.blockchain.index_level
@@ -248,7 +248,11 @@ class Provider:
 
         while level <= self.head:
             self.logger.info(f'Indexing level {level}')
-            self.index_level(level)
+            block = self.blockchain.block_set.get_or_create(
+                level=level,
+                hash=self.block_hash(level),
+            )
+            self.index_block(block)
             self.blockchain.index_level = level
             level += 1
         self.blockchain.save()

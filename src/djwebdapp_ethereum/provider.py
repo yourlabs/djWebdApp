@@ -18,6 +18,15 @@ class EthereumProvider(Provider):
         wallet = self.client.eth.account.create()
         return wallet.address, bytes(wallet.key)
 
+    def block_hashes(self, min_level, max_level):
+        return {
+            level: self.block_hash(level)
+            for level in range(min_level, max_level + 1)
+        }
+
+    def block_hash(self, level):
+        return self.client.eth.get_block(level).hash.hex()
+
     def get_client(self, **kwargs):
         endpoint = self.blockchain.node_set.first().endpoint
         client = Web3(Web3.HTTPProvider(endpoint))

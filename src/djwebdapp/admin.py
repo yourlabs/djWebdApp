@@ -95,7 +95,7 @@ class TransactionAdmin(admin.ModelAdmin):
     readonly_fields = (
         'gas',
         'gasprice',
-        'level',
+        'block',
         'last_fail',
         'history',
         'kind',

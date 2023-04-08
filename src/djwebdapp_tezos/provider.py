@@ -38,6 +38,16 @@ class TezosProvider(Provider):
     def head(self):
         return self.client.shell.head.metadata()['level_info']['level']
 
+    def block_hashes(self, min_level, max_level):
+        hashes = self.client.shell.blocks[min_level:max_level]()[0]
+        return {
+            level: hash
+            for level, hash in enumerate(reversed(hashes), start=min_level)
+        }
+
+    def block_hash(self, level):
+        return self.client.shell.blocks[level].hash
+
     def get_address(self):
         return self.client.key.public_key_hash()
 
