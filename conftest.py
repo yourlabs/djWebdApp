@@ -38,39 +38,17 @@ def evil(path, *scripts, variables=None):
         script_path = abspath(script)
         with open(script_path) as f:
             source = f.read()
+        code = compile(source, script_path, 'exec')
         try:
-            exec(source, variables, variables)
+            exec(code, variables, variables)
         except:
-            exctype, exc, tb = sys.exc_info()
-            print('\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('EXCEPTION IN INCLUDE: START DUMP =====================')
             if number:
                 print('Executed successfuly:')
                 for i in range(0, number):
                     print(abspath(scripts[i]))
-                print('------------------------------------------------------')
-            print('FAILED:')
-            if tb and tb.tb_next:
-                print(f'> {script_path}:{tb.tb_next.tb_lineno}')
-                print(source.split('\n')[tb.tb_next.tb_lineno - 1])
-            else:
-                print(f'> {script_path}:?')
-            print(f'{exctype} {exc}')
-            print('------------------------------------------------------')
-            print('VARIABLES:')
-            for name, value in variables.items():
-                if name.startswith('__'):
-                    continue  # skip builtins
-                if name[0] == name.capitalize()[0]:
-                    continue  # skip classes
-                display = str(value).split('\n')[0][:100]
-                print(f'{name}={display}')
-            print('------------------------------------------------------')
-            print('SOURCE:')
-            for number, line in enumerate(source.split('\n'), start=1):
-                print(f'{number} {line}')
-            print('END DUMP =============================================')
-            raise
+                print('Failed:\n' + script_path)
+            exctype, exc, tb = sys.exc_info()
+            raise exctype(exc).with_traceback(tb)
     return variables
 
 
