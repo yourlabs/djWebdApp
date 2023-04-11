@@ -6,6 +6,7 @@ import urllib
 from django.db.models import Q, signals
 from django.core.exceptions import ValidationError
 from pytezos.operation.result import OperationResult
+from pytezos.rpc import RpcError
 
 from djwebdapp.exceptions import PermanentError
 from djwebdapp.models import Account, account_setup
@@ -295,6 +296,17 @@ class TezosProvider(Provider):
         if not self.client.balance():
             raise ValidationError(
                 f'{transaction.sender.address} needs more than 0 tezies')
+        elif not self.wallet.revealed:
+            try:
+                self.client.reveal().send(min_confirmations=1)
+            except RpcError as exc:
+                if len(exc.args) > 1:
+                    raise
+
+                if not exc.args[0]['id'].endswith('previously_revealed_key'):
+                    raise
+            self.wallet.revealed = True
+            self.wallet.save()
 
         self.logger.debug(f'{transaction}.deploy(): start')
         if transaction.kind == 'contract':
