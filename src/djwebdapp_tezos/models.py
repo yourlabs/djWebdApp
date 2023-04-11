@@ -1,3 +1,4 @@
+import json
 import os
 
 import dateutil.parser
@@ -90,33 +91,40 @@ def contract_micheline(sender, instance, **kwargs):
 
 
 class TezosContract(TezosTransaction):
-    contract_file_name = None
+    contract_name = None
     normalizer_class = Normalizer
 
     @property
     def contract_path(self):
-        if not self.contract_file_name:
-            raise Exception('Please contract_file_name')
+        if not self.contract_name:
+            raise Exception('Please contract_name')
+
         return os.path.join(
             self._meta.app_config.path,
             'michelson',
-            self.contract_file_name,
+            self.contract_name,
         )
 
     class Meta:
         proxy = True
 
     def save(self, *args, **kwargs):
-        if self.contract_file_name and not self.micheline:
+        if self.contract_name and not self.micheline:
             self.micheline = self.get_contract_interface().to_micheline()
         return super().save(*args, **kwargs)
 
-    def _get_contract_name(self):
-        return self.contract_file_name.split(".")[0]
-
     def get_contract_interface(self):
-        with open(self.contract_path) as michelson:
-            return ContractInterface.from_michelson(michelson.read())
+        if self.micheline:
+            return ContractInterface.from_micheline(self.micheline)
+        elif os.path.exists(f'{self.contract_path}.json'):
+            with open(f'{self.contract_path}.json') as micheline:
+                return ContractInterface.from_micheline(
+                    json.loads(micheline.read())
+                )
+        elif os.path.exists(f'{self.contract_path}.tz'):
+            with open(f'{self.contract_path}.tz') as michelson:
+                return ContractInterface.from_michelson(michelson.read())
+        raise Exception('Contract sources could not be found')
 
     def get_init_storage(self):
         raise NotImplementedError

@@ -52,7 +52,7 @@ class EthereumContract(EthereumTransaction):
     """
     Base model class for Ethereum Contracts.
 
-    .. py:attribute:: contract_file_name
+    .. py:attribute:: contract_name
 
         Name of the contract files, they are expected to be found in the
         ``ethereum`` sub-directory of the application that holds the model that
@@ -62,11 +62,11 @@ class EthereumContract(EthereumTransaction):
 
         Name of the :py:class:`~djwebdapp.normalizers.Normalizer` subclass to
         call to normalize blockchain transactions for the
-        :py:attr:`contract_file_name` of this model.
+        :py:attr:`contract_name` of this model.
 
     """
 
-    contract_file_name = None
+    contract_name = None
     normalizer_class = Normalizer
 
     class Meta:
@@ -74,21 +74,21 @@ class EthereumContract(EthereumTransaction):
 
     @property
     def contract_path(self):
-        if not self.contract_file_name:
-            raise Exception('Please contract_file_name')
+        if not self.contract_name:
+            raise Exception('Please contract_name')
 
         return os.path.join(
             self._meta.app_config.path,
             'ethereum',
-            self.contract_file_name,
+            self.contract_name,
         )
 
     def save(self, *args, **kwargs):
-        if self.contract_file_name and not self.abi:
+        if self.contract_name and not self.abi:
             with open(self.contract_path + '.abi', 'r') as f:
                 self.abi = f.read()
 
-        if self.contract_file_name and not self.bytecode:
+        if self.contract_name and not self.bytecode:
             with open(self.contract_path + '.bin', 'r') as f:
                 self.bytecode = f.read()
 
