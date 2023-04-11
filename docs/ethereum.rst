@@ -13,7 +13,7 @@ Blockchain
 Now that we have deployed a contract, let's setup ``djwebdapp`` for a local
 ethereum node, also programatically in ``./manage.py shell``:
 
-.. literalinclude:: ../src/djwebdapp_example/ethereum/blockchain.py
+.. literalinclude:: ../src/djwebdapp_example_ethereum/blockchain.py
   :language: Python
 
 Web3 client
@@ -122,6 +122,12 @@ Indexing and normalization
 Indexing is the process of parsing data from the blockchain, normalization is
 the process of transforming incomming data into structured relational data.
 
+First, let's call a smart contract function from outside djwebdapp, it's
+the call that we are going to index and normalize:
+
+.. literalinclude:: ../src/djwebdapp_example_ethereum/deploy_client.py
+  :language: Python
+
 To map incomming blockchain data into models, we'll define a
 :py:class:`~djwebdapp.normalizers.Normalizer` for that contract, in a
 ``normalizers.py`` file in the same app, and define a method par contract
@@ -133,7 +139,7 @@ models:
 
 All we have to do now is call the indexer:
 
-.. literalinclude:: ../src/djwebdapp_example/index.py
+.. literalinclude:: ../src/djwebdapp_example_ethereum/index.py
   :language: Python
 
 Example contract deployment
