@@ -38,12 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'djwebdapp',
     'djwebdapp_ethereum',
     'djwebdapp_example_ethereum',
     'djwebdapp_tezos',
-    'djwebdapp_example_tezos',
     'djwebdapp_example',
     'djwebdapp_multisig',
     'djwebdapp_fa2',
