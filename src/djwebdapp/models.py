@@ -727,6 +727,7 @@ class Transaction(models.Model):
         ('held', _('Held')),
         ('deleted', _('Deleted during reorg')),
         ('aborted', _('Aborted')),
+        ('failed', _('Failed')),
         ('deploy', _('To deploy')),
         ('deploying', _('Deploying')),
         ('retry', _('To retry')),

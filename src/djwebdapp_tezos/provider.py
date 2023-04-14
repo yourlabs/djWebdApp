@@ -63,6 +63,18 @@ class TezosProvider(Provider):
             and 'metadata' in content
         ):
             result = content['metadata']['operation_result']
+            if result["status"] == "failed":
+                spooled_tx = self.transaction_class.objects.filter(hash=hash).first()
+                if spooled_tx:
+                    spooled_tx.state = "failed"
+                    spooled_tx.error = str(result["errors"])
+                    spooled_tx.save()
+                else:
+                    # untracked tx failed. Since we're only checking if the transaction is tracked
+                    # in the condition bellow, an onchain failed transaction would make the
+                    # `address` variable declaration bellow fail with `KeyError: 'originated_contracts'`
+                    # since none were originated since the tx failed.
+                    return
             address = result['originated_contracts'][0]
             if (
                 address not in self.addresses
