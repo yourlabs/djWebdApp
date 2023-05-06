@@ -1,18 +1,22 @@
-# Then, insert a smart contract with our address
-from djwebdapp_ethereum.models import EthereumTransaction
-contract = EthereumTransaction.objects.create(
+# Insert a smart contract with our address
+from djwebdapp_example_tezos.models import FA12Tezos
+from djwebdapp_tezos.models import TezosTransaction
+contract = FA12Tezos.objects.create(
     blockchain=blockchain,
-    # used to index method calls
     address=address,
-    # used to translate function calls
-    abi=abi,
-    # used to fill the contract metadata
-    hash=contract_hash.hex(),
 )
+
+# Transaction kind was setup automatically
 assert contract.kind == 'contract'
+
+# Unspecified, micheline was downloaded automatically
+assert contract.micheline
 
 # But calls have not yet been synchronized
 assert not contract.call_set.count()
+
+# Wait for blockchain.confirmation_blocks, 2 here
+blockchain.wait()
 
 # Let's index the blockchain, you could also run ./manage.py index
 blockchain.provider.index()
@@ -23,8 +27,7 @@ contract.refresh_from_db()
 # Gas cost was indexed
 assert contract.gas
 
-
 # Mint call was indexed
 call = contract.call_set.first()
 assert call.function == 'mint'
-assert call.args['amount'] == 1000
+assert call.args['value'] == 1000

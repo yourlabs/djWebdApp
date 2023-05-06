@@ -2,6 +2,7 @@ import binascii
 import datetime
 import importlib
 import networkx
+import os
 import time
 import traceback
 import uuid
@@ -482,21 +483,27 @@ class TransactionManager(InheritanceManager):
             instance.save_base(raw=True, force_insert=True)
             instance.refresh_from_db()
             return instance, True
+        return instance, False
 
     def update_or_create(self, *args, **kwargs):
         """ Same as Django's, with dynamic parent fk handled. """
-        if self.parent_fk_column not in kwargs:
+        if (
+            self.parent_fk_column not in kwargs
+            and f'{self.parent_fk_column}_id' not in kwargs
+        ):
             return super().update_or_create(*args, **kwargs)
 
         defaults = kwargs["defaults"]
         del kwargs["defaults"]
         lookup_attributes = kwargs
 
-        if instance := self.find_or_create(lookup_attributes, defaults):
-            return instance
+        instance, created = self.find_or_create(lookup_attributes, defaults)
+        if created:
+            return instance, created
 
-        self.filter(**lookup_attributes).update(**defaults)
-        instance = self.get(**lookup_attributes)
+        for key, value in defaults.items():
+            setattr(instance, key, value)
+        instance.save()
         return instance, False
 
     def get_or_create(self, *args, **kwargs):
@@ -517,7 +524,9 @@ class Transaction(models.Model):
 
     .. py:attribute:: normalizer_class
 
-        Class of the indexer to use.
+        Name of the :py:class:`~djwebdapp.normalizers.Normalizer` subclass to
+        call to normalize blockchain transactions for contracts subclassing
+        this model.
 
     .. py:attribute:: id
 
@@ -641,12 +650,40 @@ class Transaction(models.Model):
         Boolean to indicate wether the indexer should index all
         transactions or not.
 
-    .. py:property:: provider
+    .. py:attribute:: contract
 
-        Returns the blockchain provider related to this transaction.
+        Smart contract related to this transaction, appliable to method call
+        transactions.
 
-    """
+    .. py:attribute:: caller
+
+        Transaction that called this one, if any.
+
+    .. py:attribute:: target_contract
+
+        In your own subclasses for function calls, this should be an FK to the
+        contract subclass, then :py:meth:`save()` will provision
+        :py:attr:`contract` from the parent model of the target contract.
+
+    .. py:attribute:: entrypoint
+
+        In your own subclasses for function calls, this should be the name of
+        the function that corresponds to the subclass, for example,
+        FA12TezosMint.entrypoint is set to the `"mint"` string.
+        Then, :py:meth:`save()` can provision :py:attr:`function` from that.
+
+    .. py:attribute:: contract_name
+
+        In your own subclasses for contract transactions, this should be the
+        name of the file that contains smart contract code, without extension.
+        The file must be in the sub-directory `contracts` of the django app of
+        the model.
+        """
     normalizer_class = None
+    entrypoint = None
+    target_contract = None
+    contract_name = None
+
     id = models.UUIDField(
         primary_key=True,
         editable=False,
@@ -715,8 +752,8 @@ class Transaction(models.Model):
         help_text='Number of failures to retry before aborting transaction',
     )
     has_code = models.BooleanField(
-        default=True,
-        help_text='Check to activate this blockchain',
+        default=False,
+        help_text='Checked if this transaction has smart contract code.',
     )
     metadata = models.JSONField(
         default=dict,
@@ -850,7 +887,7 @@ class Transaction(models.Model):
             confirmed_level = self.level + self.blockchain.min_confirmations
             head = self.blockchain.provider.head
             if confirmed_level > head:
-                self.blockchain.provider.logger.debug(
+                self.blockchain.provider.logger.info(
                     f'Set {self} to confirm instead of done'
                 )
                 state = 'confirm'
@@ -924,7 +961,18 @@ class Transaction(models.Model):
 
         Sets :py:attr:`kind` based on the attributes of this transaction and
         :py:attr:`blockchain` from the :py:attr:`sender` automatically.
+
+        Also, provision :py:attr:`~function` and :py:attr:`~contract` from
+        :py:attr:`~entrypoint` and :py:attr:`~target_contract`.
         """
+        # those would be defined by subclasses
+        self_contract = getattr(self, 'contract', None)
+        self_target_contract = getattr(self, 'target_contract', None)
+        if not self_contract and self_target_contract:
+            self.contract = self.target_contract
+        if not self.function and self.entrypoint:
+            self.function = self.entrypoint
+
         if not self.kind:
             if not self.function and not self.receiver_id:
                 self.kind = 'contract'
@@ -1035,6 +1083,17 @@ class Transaction(models.Model):
             self.error = ''
             self.last_fail = None
         self.save()
+
+    @property
+    def contract_path(self):
+        if not self.contract_name:
+            raise Exception('Please contract_name')
+
+        return os.path.join(
+            self._meta.app_config.path,
+            'contracts',
+            self.contract_name,
+        )
 
     def contract_subclass(self):
         """

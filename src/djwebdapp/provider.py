@@ -72,7 +72,7 @@ class Provider:
         :py:class:`~djwebdapp.models.Blockchain` this provider was instanciated
         for.
 
-    .. py:attribute:: account
+    .. py:attribute:: wallet
 
         :py:class:`~djwebdapp.models.Account` this provider was instanciated
         for, if any.
@@ -102,6 +102,23 @@ class Provider:
     def __init__(self, blockchain=None, wallet=None):
         self.wallet = wallet
         self.blockchain = wallet.blockchain if wallet else blockchain
+
+    def generate_secret_key(self):
+        """
+        Generate a secret key.
+
+        Raises NotImplemented in base Provider class.
+        """
+        raise NotImplementedError()
+
+    @property
+    def head(self):
+        """
+        Return the current block number.
+
+        Raises NotImplemented in base Provider class.
+        """
+        raise NotImplementedError()
 
     def download(self, target: str):
         """
@@ -311,7 +328,7 @@ class Provider:
         - which :py:attr:`~djwebdapp.models.Transaction.state` is not in
           :py:attr:`exclude_states`,
         - which sender :py:class:`~djwebdapp.models.Account` have not deployed
-          to the blockchain during this level according to :py:attr:`head` and
+          to the blockchain during this level according to :py:attr:`~head` and
           :py:attr:`djwebdapp.models.Account.last_level`
         - which sender has balance above 0
         - ordered by :py:attr:`~djwebdapp.models.Transaction.created_at`
@@ -373,13 +390,13 @@ class Provider:
 
     def spool(self):
         """
-        The spool method deploys the next transaction of any kind and return it.
+        Deploy the next transaction of any kind and return it.
 
         It checks for the next transaction with the following logic:
 
-        - :py:meth:`~transfers()`: is there any new transfer to deploy?
-        - :py:meth:`~contracts()`: is there any *new* contract to deploy from
-          an account with balance?
+        - :py:meth:`~spool_transfers()`: is there any new transfer to deploy?
+        - :py:meth:`~spool_contracts()`: is there any *new* contract to deploy
+          from an account with balance?
         """
         # senders which have already deployed during this block must be
         # excluded

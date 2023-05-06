@@ -14,8 +14,8 @@ def cross_contract_call_factory(blockchain):
         shell='http://tzlocal:8732',
     )
 
-    callee_micheline = json.load(open('src/djwebdapp_example/tezos/callee.json'))
-    caller_micheline = json.load(open('src/djwebdapp_example/tezos/caller.json'))
+    callee_micheline = json.load(open('src/djwebdapp_example_tezos/callee.json'))
+    caller_micheline = json.load(open('src/djwebdapp_example_tezos/caller.json'))
 
     callee_ci = ContractInterface.from_micheline(callee_micheline).using(**using_params)
     callee_init_storage = {

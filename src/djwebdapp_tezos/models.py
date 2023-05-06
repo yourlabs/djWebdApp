@@ -14,6 +14,13 @@ from djwebdapp.normalizers import Normalizer
 
 
 class TezosTransaction(Transaction):
+    """
+    Base class for tezos transactions.
+
+    .. py:attribute:: micheline
+
+        Smart contract micheline JSON code.
+    """
     unit_smallest = 'xTZ'
     contract = models.ForeignKey(
         'self',
@@ -37,6 +44,10 @@ class TezosTransaction(Transaction):
     )
 
     def save(self, *args, **kwargs):
+        """
+        Set :py:attr:`~djwebdapp.models.Transaction.has_code` if
+        :py:attr:`~micheline`.
+        """
         if self.micheline:
             self.has_code = True
         return super().save(*args, **kwargs)
@@ -94,21 +105,14 @@ class TezosContract(TezosTransaction):
     contract_name = None
     normalizer_class = Normalizer
 
-    @property
-    def contract_path(self):
-        if not self.contract_name:
-            raise Exception('Please contract_name')
-
-        return os.path.join(
-            self._meta.app_config.path,
-            'michelson',
-            self.contract_name,
-        )
-
     class Meta:
         proxy = True
 
     def save(self, *args, **kwargs):
+        """
+        Set :py:attr:`~djwebdapp_tezos.models.TezosTransaction.micheline` if
+        :py:attr:`~djwebdapp.models.Transaction.contract_name` is set.
+        """
         if self.contract_name and not self.micheline:
             self.micheline = self.get_contract_interface().to_micheline()
         return super().save(*args, **kwargs)
@@ -141,13 +145,6 @@ class TezosCall(TezosTransaction):
     entrypoint = None
     normalizer_class = None
     target_contract = None
-
-    def save(self, *args, **kwargs):
-        if not self.function:
-            self.function = self.entrypoint
-        if not self.contract:
-            self.contract = self.target_contract
-        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True

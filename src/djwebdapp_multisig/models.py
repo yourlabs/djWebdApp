@@ -8,7 +8,7 @@ User = get_user_model()
 
 
 class MultisigContract(TezosContract):
-    contract_file_name = "multisig.tz"
+    contract_name = "multisig"
     admin = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,

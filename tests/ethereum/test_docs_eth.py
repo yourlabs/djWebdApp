@@ -11,7 +11,7 @@ def test_index(include, blockchain):
     See djwebdapp_tezos.tests.test_tezos_index.test_index docstring.
     """
     variables = include(
-        'djwebdapp_example/ethereum',
+        'djwebdapp_example_ethereum',
         'client', 'load', 'deploy', 'blockchain', 'index',
     )
 
@@ -34,25 +34,25 @@ def test_index(include, blockchain):
 @pytest.mark.django_db
 def test_transfer(include, blockchain):
     include(
-        'djwebdapp_example/ethereum',
+        'djwebdapp_example_ethereum',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
-        '../wait',
-        '../balance',
+        '../djwebdapp_example/wait',
+        '../djwebdapp_example/balance',
     )
 
 
 @pytest.mark.django_db
 def test_spool(include, blockchain):
     include(
-        'djwebdapp_example/ethereum',
+        'djwebdapp_example_ethereum',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
         'load',
         'deploy_contract',
@@ -61,18 +61,33 @@ def test_spool(include, blockchain):
 
 @pytest.mark.django_db
 def test_docs(include, admin_smoketest, blockchain):
-    include(
-        'djwebdapp_example/ethereum',
+    variables = include(
+        'djwebdapp_example_ethereum',
         'client',
-        'load',
-        'deploy',
         'blockchain',
-        'index',
+        'account',
+        'deploy_model',
         'normalize',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
-        '../balance',
-        'deploy_contract',
+        '../djwebdapp_example/balance',
     )
     admin_smoketest()
+
+    # regression test against side against side effect when our
+    # Transactions.objects.update_or_create() override creates new objects when
+    # it should have updated with parent
+    contract = variables['contract']
+    assert contract.fa12ethereummint_set.count() == 3
+    assert EthereumTransaction.objects.count() == 4
+
+    blockchain.provider.index()
+
+    assert contract.fa12ethereummint_set.count() == 3
+    assert EthereumTransaction.objects.count() == 4
+
+    blockchain.provider.normalize()
+
+    assert contract.fa12ethereummint_set.count() == 3
+    assert EthereumTransaction.objects.count() == 4

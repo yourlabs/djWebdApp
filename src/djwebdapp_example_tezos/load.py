@@ -1,6 +1,6 @@
 # load contract source code
 import json
-source = json.load(open('src/djwebdapp_example/tezos/FA12.json'))
+source = json.load(open('src/djwebdapp_example_tezos/contracts/FA12.json'))
 
 # initial storage in micheline :P
 storage = {

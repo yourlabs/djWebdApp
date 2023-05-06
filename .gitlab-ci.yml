@@ -10,7 +10,7 @@ build:
 
 qa:
   stage: test
-  script: flake8 --exclude migrations,djwebdapp_example src djwebdapp_demo
+  script: flake8 --exclude migrations,djwebdapp_example* src djwebdapp_demo
 
 docs:
   stage: test

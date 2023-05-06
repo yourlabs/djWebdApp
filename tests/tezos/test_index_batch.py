@@ -7,7 +7,7 @@ from djwebdapp_tezos.models import TezosTransaction
 @pytest.mark.parametrize('method', ('index', 'download'))
 def test_index_batch_transaction(include, method, blockchain):
     variables = include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client', 'load', 'deploy', 'blockchain', 'index', 'normalize',
     )
     contract = variables['contract']

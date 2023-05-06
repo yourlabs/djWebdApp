@@ -1,5 +1,3 @@
-import os
-
 from django.db import models
 
 from djwebdapp.models import Transaction
@@ -7,6 +5,17 @@ from djwebdapp.normalizers import Normalizer
 
 
 class EthereumTransaction(Transaction):
+    """
+    Base model for Ethereum transactions.
+
+    .. py:attribute:: abi
+
+        Smart contract ABI code.
+
+    .. py:attribute:: bytecode
+
+        Smart contract bytecode.
+    """
     contract = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -39,13 +48,13 @@ class EthereumTransaction(Transaction):
     )
 
     def save(self, *args, **kwargs):
-        if self.bytecode:
+        """
+        Sets :py:attr:`~djwebdapp.models.Transaction.has_code` if
+        :py:attr:`bytecode` is set.
+        """
+        if self.bytecode and self.abi:
             self.has_code = True
         return super().save(*args, **kwargs)
-
-    def get_args(self):
-        """ Return contract deploy arguments """
-        raise NotImplemented()
 
 
 class EthereumContract(EthereumTransaction):
@@ -55,15 +64,8 @@ class EthereumContract(EthereumTransaction):
     .. py:attribute:: contract_name
 
         Name of the contract files, they are expected to be found in the
-        ``ethereum`` sub-directory of the application that holds the model that
-        is inheriting from this class.
-
-    .. py:attribute:: normalizer_class
-
-        Name of the :py:class:`~djwebdapp.normalizers.Normalizer` subclass to
-        call to normalize blockchain transactions for the
-        :py:attr:`contract_name` of this model.
-
+        ``contracts`` sub-directory of the Django App that holds the model that
+        is inheriting from this class (your app)
     """
 
     contract_name = None
@@ -72,18 +74,12 @@ class EthereumContract(EthereumTransaction):
     class Meta:
         proxy = True
 
-    @property
-    def contract_path(self):
-        if not self.contract_name:
-            raise Exception('Please contract_name')
-
-        return os.path.join(
-            self._meta.app_config.path,
-            'ethereum',
-            self.contract_name,
-        )
-
     def save(self, *args, **kwargs):
+        """
+        Sets :py:attr:`~djwebdapp_ethereum.models.EthereumTransaction.abi` and
+        :py:attr:`~djwebdapp_ethereum.models.EthereumTransaction.bytecode` if
+        :py:attr:`contract_name` is set.
+        """
         if self.contract_name and not self.abi:
             with open(self.contract_path + '.abi', 'r') as f:
                 self.abi = f.read()
@@ -115,19 +111,7 @@ class EthereumContract(EthereumTransaction):
 class EthereumCall(EthereumTransaction):
     """
     Base model class for Ethereum contract function calls.
-
-    .. py:attribute:: entrypoint
-
-        Corresponding function name.
     """
-    entrypoint = None
-
-    def save(self, *args, **kwargs):
-        if not self.function:
-            self.function = self.entrypoint
-        if not self.contract:
-            self.contract = self.target_contract
-        super().save(*args, **kwargs)
 
     class Meta:
         proxy = True

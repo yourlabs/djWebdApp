@@ -1,23 +1,23 @@
 from djwebdapp.models import Account
 from djwebdapp.normalizers import Normalizer
 
-from djwebdapp_example_ethereum.models import FA12Ethereum, FA12EthereumMint, FA12EthereumBalance
+from djwebdapp_example_tezos.models import FA12Tezos, FA12TezosMint, FA12TezosBalance
 
 
-class FA12EthereumNormalizer(Normalizer):
+class FA12TezosNormalizer(Normalizer):
     def mint(self, call, contract):
         account, _ = Account.objects.get_or_create(
-            address=call.args['account'],
+            address=call.args['_to'],
         )
-        call, _ = FA12EthereumMint.objects.update_or_create(
-            ethereumtransaction_ptr_id=call.id,
+        call, _ = FA12TezosMint.objects.update_or_create(
+            tezostransaction_ptr_id=call.id,
             defaults=dict(
                 target_contract=contract,
                 mint_account=account,
-                mint_amount=call.args['amount'],
+                mint_amount=call.args['value'],
             )
         )
-        balance, _ = FA12EthereumBalance.objects.get_or_create(
+        balance, _ = FA12TezosBalance.objects.get_or_create(
             account=account,
             fa12=contract,
         )
