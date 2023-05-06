@@ -1,4 +1,4 @@
-FROM yourlabs/python-arch
+FROM yourlabs/python
 
 ENV DJANGO_SETTINGS_MODULE=djwebdapp_demo.settings
 ENV PYTHONIOENCODING=UTF-8 PYTHONUNBUFFERED=1
