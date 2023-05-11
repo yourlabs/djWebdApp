@@ -13,7 +13,7 @@ build:
   - libsecp256k1-dev
   - libgmp-dev
   tools:
-    python: "3.11"
+    python: "3.10"
     # You can also specify other tool versions:
     # nodejs: "16"
     # rust: "1.55"
