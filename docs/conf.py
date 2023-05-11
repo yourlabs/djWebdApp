@@ -18,11 +18,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'djWebdApp'
-copyright = '2021-2022, James Pic'
-author = 'James Pic'
+copyright = '2021-2023, PyratzLabs'
+author = 'PyratzLabs'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.0'
+release = '0.5.0'
 
 import django, os, sys
 sys.path.insert(0, os.path.abspath('..'))
