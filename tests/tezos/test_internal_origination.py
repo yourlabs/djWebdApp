@@ -4,6 +4,7 @@ import pytest
 from pytezos import ContractInterface
 from pytezos.contract.result import OperationResult
 
+from django.core.management import call_command
 from djwebdapp_tezos.models import TezosTransaction
 
 
@@ -28,7 +29,7 @@ def test_internal_operation(client, using, blockchain):
 
     factory = client.contract(factory_addr)
 
-    opg = factory.default().send(min_confirmations=1)
+    opg = factory.default(1).send(min_confirmations=1)
 
     # destination not available when "kind" == "origination"
     assert "destination" not in opg.opg_result["contents"][0]["metadata"]["internal_operation_results"][0]
@@ -51,11 +52,53 @@ def test_internal_operation(client, using, blockchain):
         address=factory_addr,
     )
 
-    blockchain.provider.index()
+    # This mock is used to verify normalize() call order
+    from djwebdapp.normalizers import Normalizer
+    class TestNormalizer(Normalizer):
+        txs = []
+        originations = []
+        calls = []
+        def deploy(self, transaction, contract):
+            # second origination is an internal transaction
+            # and should have a caller which we should be
+            # able to access here
+            if len(self.originations):
+                assert transaction.caller
 
+            self.originations.append(transaction)
+            self.txs.append(transaction)
+
+        def default(self, transaction, contract):
+            self.calls.append(transaction)
+            self.txs.append(transaction)
+
+            # our call to the smart contract originated
+            # a new smart contract in an internal call.
+            # we should be able to access the internal call
+            # here.
+            assert len(transaction.internal_calls)
+
+    TezosTransaction.normalizer_class = TestNormalizer
+
+    blockchain.wait_blocks()
+    blockchain.provider.index()
     contract.refresh_from_db()
     assert contract.hash
-    assert TezosTransaction.objects.get(
+
+    internal_origination = TezosTransaction.objects.get(
         blockchain=blockchain,
         address=originated_address,
     )
+
+    call = TezosTransaction.objects.get(
+        blockchain=blockchain,
+        hash=internal_origination.hash,
+        contract=contract,
+    )
+    call_command('normalize')
+
+    assert TestNormalizer.originations == [contract, internal_origination]
+    assert TestNormalizer.calls == [call]
+    assert TestNormalizer.txs == [contract, call, internal_origination]
+
+    TezosTransaction.normalizer_class = None

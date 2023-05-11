@@ -110,8 +110,3 @@ class Balance(models.Model):
 
     def __str__(self):
         return f'{self.address} balance: {self.balance}'
-
-
-# importing other documentation code snippets concerning signals here
-from .ethereum.mint_normalize import mint_normalize_ethereum  # noqa
-from .tezos.mint_normalize import mint_normalize_tezos        # noqa

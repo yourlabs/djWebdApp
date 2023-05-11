@@ -10,8 +10,9 @@ class FA12(Contract):
     owner: Address
 
     def mint(self, _to: Address, value: Nat):
-        if SENDER != self.owner:
-            raise Exception("Only owner can mint")
+        # for the sake of the examples, don't apply this security
+        #if SENDER != self.owner:
+        #    raise Exception("Only owner can mint")
 
         self.total_supply = self.total_supply + value
 

@@ -31,7 +31,7 @@ def blockchain(head):
         provider_class='djwebdapp_ethereum.provider.EthereumProvider',
         defaults=dict(
             index_level=head,
-            min_confirmations=1,
+            min_confirmations=0,
         ),
     )
     blockchain.node_set.get_or_create(endpoint='http://ethlocal:8545')

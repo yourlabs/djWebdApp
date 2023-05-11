@@ -6,9 +6,10 @@ import urllib
 from django.db.models import Q, signals
 from django.core.exceptions import ValidationError
 from pytezos.operation.result import OperationResult
+from pytezos.rpc import RpcError
 
 from djwebdapp.exceptions import PermanentError
-from djwebdapp.models import Account, setup
+from djwebdapp.models import Account, account_setup
 from djwebdapp.provider import Provider
 
 from djwebdapp_tezos.models import TezosTransaction
@@ -119,17 +120,39 @@ class TezosProvider(Provider):
                           number=None):
         self.logger.info(f'Syncing origination {hash}')
 
+        originated_contracts = []
         for originated_address in content['result']['originated_contracts']:
             contract, created = self.transaction_class.objects.get_or_create(
                 address=originated_address,
                 blockchain=self.blockchain,
+                caller=caller,
             )
             contract.level = level
             contract.hash = hash
             contract.gas = content.get('fee', 0)
             contract.metadata = content
+            contract.nonce = content.get('nonce', -1)
+            contract.sender = self.get_account(content['source'])
             contract.number = number
             contract.state_set('done')
+            originated_contracts.append(contract)
+
+        return originated_contracts
+
+    def get_account(self, address):
+        sender = Account.objects.filter(
+            address=address,
+            blockchain=self.blockchain,
+        ).first()
+
+        if not sender:
+            sender = Account.objects.create(
+                address=address,
+                blockchain=self.blockchain,
+                index=False,
+            )
+
+        return sender
 
     def index_transaction(self, level, hash, content, caller=None,
                           number=None):
@@ -191,17 +214,7 @@ class TezosProvider(Provider):
 
         # update call
         call.metadata = content
-        call.sender = Account.objects.filter(
-            address=content['source'],
-            blockchain=self.blockchain,
-        ).first()
-
-        if not call.sender:
-            call.sender = Account.objects.create(
-                address=content['source'],
-                blockchain=self.blockchain,
-                index=False,
-            )
+        call.sender = self.get_account(content['source'])
 
         # patch against empty args in pytezes
         if 'parameters' in content:
@@ -249,27 +262,23 @@ class TezosProvider(Provider):
 
             if operation_content['kind'] == 'origination':
                 if 'originated_contracts' in operation_content['result']:
-                    self.index_origination(
+                    internal_originations = self.index_origination(
                         level,
                         op['hash'],
                         operation_content,
                         source,
                         number=number,
                     )
-
-        # save all calls
-        source.state_set('held')
-        [tx.state_set('held') for tx in internal_transactions]
-        # call indexing signals starting with the external call
-        source.state_set('done')
-        # call indexing signals for internal tx in execution order
-        [tx.state_set('done') for tx in internal_transactions]
+                    internal_transactions += internal_originations
 
         return source
 
     def transfer(self, transaction):
+        """ Execute a transfer transaction. """
+
         """
         rpc error if balance too low :
+
         RpcError ({'amount': '120000000000000000',
               'balance': '3998464237867',
               'contract': 'tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN',
@@ -287,6 +296,17 @@ class TezosProvider(Provider):
         if not self.client.balance():
             raise ValidationError(
                 f'{transaction.sender.address} needs more than 0 tezies')
+        elif not self.wallet.revealed:
+            try:
+                self.client.reveal().send(min_confirmations=1)
+            except RpcError as exc:
+                if len(exc.args) > 1:
+                    raise
+
+                if not exc.args[0]['id'].endswith('previously_revealed_key'):
+                    raise
+            self.wallet.revealed = True
+            self.wallet.save()
 
         self.logger.debug(f'{transaction}.deploy(): start')
         if transaction.kind == 'contract':
@@ -307,7 +327,7 @@ class TezosProvider(Provider):
     def originate(self, transaction):
         tx = self.client.origination(dict(
             code=transaction.micheline,
-            storage=self.get_args(transaction),
+            storage=transaction.get_args(),
         )).autofill().sign()
 
         self.write_transaction(tx, transaction)
@@ -329,7 +349,11 @@ class TezosProvider(Provider):
         ci = self.client.contract(transaction.contract.address)
         method = getattr(ci, transaction.function)
         try:
-            tx = method(*self.get_args(transaction))
+            args = transaction.get_args()
+            if isinstance(args, dict):
+                tx = method(**args)
+            else:
+                tx = method(*args)
             if transaction.amount:
                 tx = tx.with_amount(transaction.amount)
         except ValueError as e:
@@ -386,7 +410,7 @@ class TezosProvider(Provider):
             operations[key] = operation
 
         # disable automatic refresh of balances to speed up the whole process
-        signals.pre_save.disconnect(setup, sender=Account)
+        signals.pre_save.disconnect(account_setup, sender=Account)
         # we're also going to cache Account objects
         accounts = dict()
 
@@ -451,4 +475,4 @@ class TezosProvider(Provider):
             call.state_set('done')
 
         # reconnect Account signal
-        signals.pre_save.connect(setup, sender=Account)
+        signals.pre_save.connect(account_setup, sender=Account)

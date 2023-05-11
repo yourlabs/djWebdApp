@@ -10,7 +10,7 @@ from djwebdapp_tezos.models import TezosTransaction
 @pytest.mark.django_db
 def test_index(include, blockchain):
     variables = include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client', 'load', 'deploy', 'blockchain', 'index',
     )
     contract = variables['contract']
@@ -34,25 +34,25 @@ def test_index(include, blockchain):
 @pytest.mark.django_db
 def test_transfer(include, blockchain):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
-        '../wait',
-        '../balance',
+        '../djwebdapp_example/wait',
+        '../djwebdapp_example/balance',
     )
 
 
 @pytest.mark.django_db
 def test_spool(include, blockchain):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
         'load',
         'deploy_contract',
@@ -62,11 +62,11 @@ def test_spool(include, blockchain):
 @pytest.mark.django_db
 def test_confirm(include, blockchain):
     variables = include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
         'load',
     )
@@ -90,7 +90,7 @@ def test_confirm(include, blockchain):
 
     # let's ensure it's not accounted for to spool anymore
     provider = copy.deepcopy(contract.blockchain.provider)
-    assert contract not in provider.contracts()
+    assert contract not in provider.spool_contracts()
 
     # indexing again after only one block should not change state to done
     contract.blockchain.wait_blocks(1)
@@ -139,11 +139,11 @@ def test_confirm(include, blockchain):
 @pytest.mark.django_db
 def test_spool_call_parallel(include, blockchain):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client',
         'blockchain',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
         'load',
         'deploy_contract',
@@ -154,18 +154,16 @@ def test_spool_call_parallel(include, blockchain):
 @pytest.mark.django_db
 def test_docs(include, admin_smoketest, blockchain):
     include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client',
-        'load',
-        'deploy',
         'blockchain',
-        'index',
+        'account',
+        'deploy_model',
         'normalize',
         'wallet_import',
-        '../wallet_create',
+        '../djwebdapp_example/wallet_create',
         'transfer',
-        '../balance',
-        'deploy_contract',
+        '../djwebdapp_example/balance',
     )
     admin_smoketest()
 
@@ -174,7 +172,7 @@ def test_docs(include, admin_smoketest, blockchain):
 @pytest.mark.parametrize('method', ('shell', 'python'))
 def test_download(include, method, blockchain):
     variables = include(
-        'djwebdapp_example/tezos',
+        'djwebdapp_example_tezos',
         'client', 'load', 'deploy', 'blockchain',
     )
 

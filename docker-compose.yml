@@ -14,7 +14,7 @@ services:
 
   tzlocal:
     container_name: tzlocal
-    image: yourlabs/tezos
+    image: pyratzlabs/tezos:lima
     ports:
       - 0.0.0.0:8732:8732
 

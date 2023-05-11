@@ -10,7 +10,7 @@ build:
 
 qa:
   stage: test
-  script: flake8 --exclude migrations,djwebdapp_example src djwebdapp_demo
+  script: flake8 --exclude migrations,djwebdapp_example* src djwebdapp_demo
 
 docs:
   stage: test
@@ -75,7 +75,7 @@ test:
     - "--nousb"
     - "--gcmode=archive"
   - alias: tzlocal
-    name: yourlabs/tezos
+    name: pyratzlabs/tezos:lima
   - alias: tzkt-db
     name: postgres:13
   - alias: tzkt-api
