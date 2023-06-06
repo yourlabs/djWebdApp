@@ -119,8 +119,10 @@ class EthereumProvider(Provider):
         args = transaction.get_args()
 
         for i, inp in enumerate(func.abi.get('inputs', [])):
-            if inp['type'].startswith('bytes32'):
+            elif inp['type'].startswith('bytes32'):
                 args[i] = self.client.toBytes(hexstr=args[i])
+            elif inp['type'].startswith('uint'):
+                args[i] = int(args[i])
 
         tx = func(*args)
         transaction.hash = self.write_transaction(transaction.sender, tx)
