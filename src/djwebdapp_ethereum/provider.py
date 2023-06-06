@@ -119,6 +119,18 @@ class EthereumProvider(Provider):
         args = transaction.get_args()
 
         for i, inp in enumerate(func.abi.get('inputs', [])):
+            if inp['type'] == 'tuple':
+                tmp_list_from_tuple = []
+
+                for j, component in enumerate(inp['components']):
+                    if component['type'].startswith('bytes32'):
+                        tmp_list_from_tuple.append(self.client.to_bytes(hexstr=args[i][j]))
+                    elif component['type'].startswith('uint'):
+                        tmp_list_from_tuple.append(int(args[i][j]))
+                    else:
+                        tmp_list_from_tuple.append(args[i][j])
+                args[i] = tuple(tmp_list_from_tuple)
+
             elif inp['type'].startswith('bytes32'):
                 args[i] = self.client.toBytes(hexstr=args[i])
             elif inp['type'].startswith('uint'):
