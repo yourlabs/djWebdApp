@@ -56,6 +56,17 @@ class EthereumTransaction(Transaction):
             self.has_code = True
         return super().save(*args, **kwargs)
 
+    @property
+    def receipt(self):
+        return self.provider.client.eth.get_transaction_receipt(self.hash)
+
+    @property
+    def contract_ci(self):
+        return self.provider.client.eth.contract(address=self.contract.address, abi=self.contract.abi)
+
+    def get_event(self, event_name):
+        return getattr(self.contract_ci.events, event_name)().process_receipt(self.receipt)
+
 
 class EthereumContract(EthereumTransaction):
     """
