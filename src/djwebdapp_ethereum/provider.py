@@ -25,7 +25,7 @@ class EthereumProvider(Provider):
         if settings.DEBUG and not self.wallet:  # geth default account
             client.eth.default_account = client.eth.accounts[0]
 
-        if 'ethlocal' in endpoint or 'localhost' in endpoint:
+        if 'ethlocal' in endpoint or 'localhost' in endpoint or 'polygon-mumbai' in endpoint:
             from web3.middleware import geth_poa_middleware
             client.middleware_onion.inject(geth_poa_middleware, layer=0)
         return client
