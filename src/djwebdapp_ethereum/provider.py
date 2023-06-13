@@ -18,6 +18,22 @@ class EthereumProvider(Provider):
         wallet = self.client.eth.account.create()
         return wallet.address, bytes(wallet.key)
 
+    def should_activate_client_middleware(self, endpoint):
+        """
+        For non-mainnet chains, the client needs to activate an onion
+        middleware. See:
+        https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
+
+        This method checks whether, given the blockchain endpoint, this
+        middleware should be activated
+        """  # noqa: E501
+        middleware_endpoints = [
+            'ethlocal',
+            'localhost',
+            'polygon-mumbai',
+        ]
+        return len([substr in endpoint for substr in middleware_endpoints])
+
     def get_client(self, **kwargs):
         endpoint = self.blockchain.node_set.first().endpoint
         client = Web3(Web3.HTTPProvider(endpoint))
@@ -25,9 +41,10 @@ class EthereumProvider(Provider):
         if settings.DEBUG and not self.wallet:  # geth default account
             client.eth.default_account = client.eth.accounts[0]
 
-        if 'ethlocal' in endpoint or 'localhost' in endpoint or 'polygon-mumbai' in endpoint:
+        if self.should_activate_client_middleware(endpoint):
             from web3.middleware import geth_poa_middleware
             client.middleware_onion.inject(geth_poa_middleware, layer=0)
+
         return client
 
     def get_balance(self, address=None):
@@ -124,7 +141,9 @@ class EthereumProvider(Provider):
 
                 for j, component in enumerate(inp['components']):
                     if component['type'].startswith('bytes32'):
-                        tmp_list_from_tuple.append(self.client.to_bytes(hexstr=args[i][j]))
+                        tmp_list_from_tuple.append(
+                            self.client.to_bytes(hexstr=args[i][j])
+                        )
                     else:
                         tmp_list_from_tuple.append(args[i][j])
                 args[i] = tuple(tmp_list_from_tuple)

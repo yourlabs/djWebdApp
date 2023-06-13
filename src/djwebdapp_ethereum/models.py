@@ -62,10 +62,17 @@ class EthereumTransaction(Transaction):
 
     @property
     def contract_ci(self):
-        return self.provider.client.eth.contract(address=self.contract.address, abi=self.contract.abi)
+        return self.provider.client.eth.contract(
+            address=self.contract.address,
+            abi=self.contract.abi,
+        )
 
     def get_event(self, event_name):
-        return getattr(self.contract_ci.events, event_name)().process_receipt(self.receipt)
+        event = getattr(
+            self.contract_ci.events,
+            event_name,
+        )()
+        return event.process_receipt(self.receipt)
 
 
 class EthereumContract(EthereumTransaction):
