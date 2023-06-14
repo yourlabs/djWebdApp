@@ -1,0 +1,227 @@
+#+title: Djwebdapp V0.5
+#+author: Thomas Binetruy
+#+date: {{{time(%Y-%m-%d)}}}
+
+#+LATEX_HEADER_EXTRA: \usepackage{algorithm}
+#+LATEX_HEADER_EXTRA: \usepackage{algpseudocode}
+
+#+LATEX_HEADER: \usepackage[margin=2cm]{geometry}
+
+* Introduction
+
+My citation \cite{OrgCitations}.
+
+* Provider
+
+#+begin_src mermaid :file images/provider.png :pupeteer-config-file ~/puppeteerConfigFile.json
+classDiagram
+    Provider <|-- TezosProvider
+    Provider <|-- EvmProvider
+    Provider: +index()
+    Provider: +index_level(level) NotImplemented
+    Provider: +normalize()
+    Provider: +reorg()
+    Provider: +deploy(transaction) NotImplemented
+    Provider: +get_client(wallet) NotImplemented
+    Provider: +generate_secret_key() NotImplementd
+    Provider: +head() NotImplemented
+    Provider: +get_balance(wallet) NotImplemented
+    class TezosProvider{
+       +is_implicit_contract(wallet)
+       +index_origination(level, hash, content, caller, number)
+       +index_transaction(level, hash, content, caller, number)
+       +index_contract(level, op, content, number)
+       +index_call(level, op, content, number)
+       +originate(transaction)
+       +write_transaction(transaction)
+       +transfer(transaction)
+    }
+    class EvmProvider{
+       +index_contract(level, transaction)
+       +index_call(level, transaction)
+       +originate(transaction)
+       +write_transaction(sender, tx)
+       +transfer(transaction)
+    }
+#+end_src
+
+#+attr_latex: :width 15cm
+#+RESULTS:
+[[file:images/provider.png]]
+
+
+* Blockchain
+
+#+begin_src mermaid :file images/blockchain_class.png :pupeteer-config-file ~/puppeteerConfigFile.json
+classDiagram
+    class Blockchain
+    Blockchain: +String name
+    Blockchain: +String provider_class
+    Blockchain: +Boolean is_active
+    Blockchain: +String unit
+    Blockchain: +String unit_micro
+    Blockchain: +Int index_level
+    Blockchain: +Int min_confirmatinos
+    Blockchain: +JSON configuration
+
+    Blockchain: +wait()
+    Blockchain: +wait_level()
+    Blockchain: +wait_blocks()
+#+end_src
+
+#+attr_latex: :width 4cm
+#+RESULTS:
+[[file:images/blockchain_class.png]]
+
+
+#+begin_src mermaid :file images/node.png :pupeteer-config-file ~/puppeteerConfigFile.json
+classDiagram
+    class Node
+    Node: +Blockchain blockchain
+    Node: +String name
+    Node: +String endpoint
+    Node: +Boolean is_active
+    Node: +Int priority
+#+end_src
+
+#+attr_latex: :width 4cm
+#+RESULTS:
+[[file:images/node.png]]
+
+* Account
+
+#+begin_src mermaid :file images/account.png :pupeteer-config-file ~/puppeteerConfigFile.json
+classDiagram
+    class Account
+    Account: +String name
+    Account: +String address
+    Account: +Int balance
+    Account: +User account
+    Account: +EncryptedString secret_key
+    Account: +Blockchain blockchain
+
+    Account: +provider()
+    Account: +refresh_balance()
+    Account: +set_secret_key()
+    Account: +get_secret_key()
+#+end_src
+
+#+attr_latex: :width 5cm
+#+RESULTS:
+[[file:images/account.png]]
+
+* Transactions
+
+#+begin_src mermaid :file images/transaction.png :pupeteer-config-file ~/puppeteerConfigFile.json
+classDiagram
+    Transaction <|-- TezosTransaction
+    Transaction <|-- EvmTransaction
+    TezosTransaction <|-- TezosContractProxy
+    TezosTransaction <|-- TezosCallProxy
+    EvmTransaction <|-- EvmContractProxy
+    EvmTransaction <|-- EvmCallProxy
+
+    Transaction : +String address
+    Transaction : +Account sender
+    Transaction : +String normalizer_class
+    Transaction : +CharField name
+    Transaction : +Blockchain blockchain
+    Transaction : +Int counter
+    Transaction : +Int nonce
+    Transaction : +Int max_fails
+    Transaction : +JSON metadata
+    Transaction : +Boolean index
+    Transaction : +State state
+
+    Transaction : +state_set(state)
+    Transaction : +deploy()
+    Transaction : +get_args()
+    Transaction : +normalize()
+
+    class TezosTransaction{
+        +TezosTransaction contract
+        +JSON micheline
+        +TezosTransaction caller
+
+        +internal_calls()
+        +timestamp()
+        +storage()
+        +interface()
+    }
+    class TezosContractProxy{
+        +get_contract_interface()
+        +get_init_storage()
+        +get_michelson_storage()
+        +get_args()
+    }
+    class TezosCallProxy{
+    }
+    class EvmTransaction{
+        +EvmTransaction contract
+        +JSON abi
+        +Bytes bytecode
+
+        +receipt()
+        +interface()
+        +get_event(event_name)
+    }
+    class EvmCallProxy{
+    }
+    class EvmContractProxy{
+    }
+#+end_src
+
+#+attr_latex: :width 15cm
+#+RESULTS:
+[[file:images/transaction.png]]
+
+* Algorithms
+
+#+caption: An algorithm with caption
+#+begin_algorithm
+\begin{algorithmic}
+\Require $n \geq 0$
+\Ensure $y = x^n$
+    \State $y \gets 1$
+    \State $X \gets x$
+    \State $N \gets n$
+    \While{$N \neq 0$}
+        \If{$N$ is even}
+            \State $X \gets X \times X$
+            \State $N \gets \frac{N}{2}$  \Comment{This is a comment}
+        \ElsIf{$N$ is odd}
+            \State $y \gets y \times X$
+            \State $N \gets N - 1$
+        \EndIf
+    \EndWhile
+\end{algorithmic}
+#+end_algorithm
+
+
+#+caption: Quicksort
+#+begin_algorithm
+\begin{algorithmic}
+\Procedure{Quicksort}{$A, p, r$}
+    \If{$p < r$}
+        \State $q = $ \Call{Partition}{$A, p, r$}
+        \State \Call{Quicksort}{$A, p, q - 1$}
+        \State \Call{Quicksort}{$A, q + 1, r$}
+    \EndIf
+\EndProcedure
+\Procedure{Partition}{$A, p, r$}
+    \State $x \gets A[r]$
+    \State $i \gets p - 1$
+    \For{$j \gets p$ to $r - 1$}
+        \If{$A[j] < x$}
+            \State $i \gets i + 1$
+            \State exchange
+            $A[i]$ with $A[j]$
+        \EndIf
+        \State exchange $A[i]$ with $A[r]$
+    \EndFor
+\EndProcedure
+\end{algorithmic}
+#+end_algorithm
+
+\bibliographystyle{acm}
+\bibliography{org-bib-refs}
