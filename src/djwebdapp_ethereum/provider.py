@@ -63,9 +63,8 @@ class EthereumProvider(Provider):
         return self.client.eth.get_block_number()
 
     def index_level(self, level):
-        block = self.client.eth.get_block(level)
-        for hash in block.transactions:
-            transaction = self.client.eth.get_transaction(hash)
+        block = self.client.eth.get_block(level, True)
+        for transaction in block.transactions:
             to = transaction.get('to', None)
             if to is None and transaction['hash'].hex() in self.hashes:
                 self.index_contract(level, transaction)
