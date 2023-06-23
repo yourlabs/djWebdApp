@@ -65,9 +65,10 @@ class EthereumTransaction(Transaction):
     @property
     def receipt(self):
         if not self._receipt:
-            self._receipt = self.provider.client.eth.get_transaction_receipt(
+            receipt = self.provider.client.eth.get_transaction_receipt(
                 self.hash
             )
+            self._receipt = self.provider.json(receipt)
             self.save()
         return self._receipt
 

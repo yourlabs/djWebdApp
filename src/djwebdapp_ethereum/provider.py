@@ -95,7 +95,7 @@ class EthereumProvider(Provider):
             transaction['hash'].hex(),
         )
 
-        if tx_receipt.status == 0:
+        if tx_receipt["status"] == 0:
             return
 
         if not call:
@@ -107,7 +107,7 @@ class EthereumProvider(Provider):
         call.metadata = self.json(transaction)
         call.gas = transaction['gas']
         call.level = level
-        call._receipt = tx_receipt
+        call._receipt = self.json(tx_receipt)
         call.sender, _ = Account.objects.get_or_create(
             address=transaction['from'],
             blockchain=self.blockchain,
