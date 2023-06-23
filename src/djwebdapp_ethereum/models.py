@@ -46,6 +46,12 @@ class EthereumTransaction(Transaction):
         null=True,
         help_text='Contract bytecode if this is a smart contract to deploy',
     )
+    _receipt = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text='Transaction receipt',
+    )
 
     def save(self, *args, **kwargs):
         """
@@ -58,7 +64,10 @@ class EthereumTransaction(Transaction):
 
     @property
     def receipt(self):
-        return self.provider.client.eth.get_transaction_receipt(self.hash)
+        if not self._receipt:
+            self._receipt = self.provider.client.eth.get_transaction_receipt(self.hash)
+            self.save()
+        return self._receipt
 
     @property
     def contract_ci(self):
