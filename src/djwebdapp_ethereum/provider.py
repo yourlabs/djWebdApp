@@ -91,6 +91,13 @@ class EthereumProvider(Provider):
         call = contract.call_set.select_subclasses().filter(
             hash=transaction['hash'].hex(),
         ).first()
+        tx_receipt = self.client.eth.get_transaction_receipt(
+            transaction['hash'].hex(),
+        )
+
+        if tx_receipt.status == 0:
+            return
+
         if not call:
             call = EthereumTransaction(
                 hash=transaction['hash'].hex(),
@@ -100,6 +107,7 @@ class EthereumProvider(Provider):
         call.metadata = self.json(transaction)
         call.gas = transaction['gas']
         call.level = level
+        call._receipt = tx_receipt
         call.sender, _ = Account.objects.get_or_create(
             address=transaction['from'],
             blockchain=self.blockchain,
