@@ -31,7 +31,7 @@ Indeed, for many applications, it is impossible to retrieve data to be shown on 
 
 Some applications also require some automated way to inject transactions into the blockchain, which can fail due to network events (the node is not reachable) and on-chain events such as reorgs. In both these cases, a system in charge of writing transactions on chain requires monitoring these transactions in order to ensure that they were indeed injected into the blockchain. Such systems include claimable reward systems on blockchain games, trading or liquidation bots, cross-chain bridges and oracles providing offchain data to on-chain smart contracts.
 
-Finally, smart contract based contracts work in a similar fashion, but have all specific SDKs that one has to learn in order to manipulate, making for heterogenous development from across blockchains.
+Finally, smart contract based blockchains work in a similar fashion, but have all specific SDKs that one has to learn in order to manipulate, making for heterogenous development from across blockchains.
 
 The present paper presents DjWebDapp, an open-source Django \cite{Django} application developped at Pyratzlabs, a Paris-based Web3 startup studio, and used by some of our startups that allow to address each of the above challenges summarized as follows:
 
@@ -545,7 +545,7 @@ Since read-time idempotent normalizers are hard to implement, DjWebDapp's indexe
 
 * End-toEnd Testing WebDapps
 
-End-to-end testing is often necessary for large applications to be continuously deployed. Since DjWebDapp provides an API for deploying, indexing and normalizing data in a already well-furnished web framowork, it is possible to end-to-end test blockchain applications build on top of DjWebDapp without mocking third party services. Indeed, since the providers shiped with DjWebDapp only require a blockchain node to communicate with, and that those are available as stand-alone docker containers in most cases, it is easy to embark them in continuous integration pipelines. Deploying and normalizing a simple contract or a complex set of contracts can be implemented in a few line of end-to-end testable code running in a CI, without requiring mocking close-source dependencies.
+End-to-end testing is often necessary for large applications to be continuously deployed. Since DjWebDapp provides an API for deploying, indexing and normalizing data in a already well-furnished web framework, it is possible to end-to-end test blockchain applications build on top of DjWebDapp without mocking third party services. Indeed, since the providers shiped with DjWebDapp only require a blockchain node to communicate with, and that those are available as stand-alone docker containers in most cases, it is easy to embark them in continuous integration pipelines. Deploying and normalizing a simple contract or a complex set of contracts can be implemented in a few line of end-to-end testable code running in a CI, without requiring mocking close-source dependencies.
 
 * Conclusion
 
