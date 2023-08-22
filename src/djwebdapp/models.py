@@ -13,6 +13,7 @@ from django.db.models import Q, Max, signals
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from picklefield.fields import PickledObjectField
 
 from fernet_fields import EncryptedTextField
 from model_utils.managers import InheritanceManager
@@ -1109,6 +1110,15 @@ class Transaction(models.Model):
             return Transaction.objects.get_subclass(pk=self.contract_id)
         except Transaction.DoesNotExist:
             pass
+
+
+class Event(models.Model):
+    name = models.CharField(max_length=500)
+    args = PickledObjectField(
+        default=dict,
+        blank=True,
+    )
+    event_index = models.PositiveBigIntegerField()
 
 
 @receiver(signals.post_save)
