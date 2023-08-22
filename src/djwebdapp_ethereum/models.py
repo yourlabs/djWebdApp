@@ -1,6 +1,6 @@
 from django.db import models
 
-from djwebdapp.models import Transaction
+from djwebdapp.models import Event, Transaction
 from djwebdapp.normalizers import Normalizer
 
 
@@ -133,3 +133,16 @@ class EthereumCall(EthereumTransaction):
 
     class Meta:
         proxy = True
+
+
+class EthereumEvent(Event):
+    contract = models.ForeignKey(
+        EthereumContract,
+        on_delete=models.CASCADE,
+        related_name="contractevent_set",
+    )
+    transaction = models.ForeignKey(
+        EthereumTransaction,
+        on_delete=models.CASCADE,
+        related_name="transactionevent_set",
+    )
