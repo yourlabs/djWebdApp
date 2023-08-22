@@ -3,12 +3,14 @@ import './FA12.sol';
 
 
 contract Caller {
-    event MintProxy(FA12 token);
+    event PreMintProxy(FA12 token);
+    event PostMintProxy();
 
     constructor() {}
 
     function mintProxy(FA12 token, address account, uint256 amount) public {
+        emit PreMintProxy(token);
         token.mint(account, amount);
-        emit MintProxy(token);
+        emit PostMintProxy();
     }
 }
