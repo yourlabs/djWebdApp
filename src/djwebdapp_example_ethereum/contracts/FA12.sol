@@ -9,6 +9,8 @@ contract FA12 {
     string private _name;
     string private _symbol;
 
+    event Mint(address indexed to_, uint256 amount_);
+
     constructor(string memory name_, string memory symbol_) {
         _name = name_;
         _symbol = symbol_;
@@ -19,6 +21,8 @@ contract FA12 {
 
         _totalSupply += amount;
         _balances[account] += amount;
+
+        emit Mint(account, amount);
     }
 
     receive() external payable {
