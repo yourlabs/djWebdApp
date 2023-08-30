@@ -96,7 +96,7 @@ class Provider:
         States to exclude when searching for transactions to deploy.
     """
     exclude_states = (
-        'held', 'aborted', 'import', 'importing', 'watching', 'done'
+        'held', 'aborted', 'import', 'importing', 'confirm', 'done'
     )
 
     def __init__(self, blockchain=None, wallet=None):
