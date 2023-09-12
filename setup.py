@@ -15,6 +15,7 @@ extras_require = dict(
     ],
     tezos=[
         'pytezos>3.4',
+        'pymich>=0.9.8',
     ],
     binary=[
         'pysodium',
@@ -40,7 +41,6 @@ setup(
         'django-model-utils',
         'djfernet>=0.8.1',
         'django-picklefield>=3.0.1',
-        'pymich>=0.9.8',
         'networkx==2.8.8',
         'mnemonic',
     ],
