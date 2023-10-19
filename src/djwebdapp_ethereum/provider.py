@@ -123,7 +123,7 @@ class EthereumProvider(Provider):
 
     def json(self, transaction):
         return {
-            key: str(value) if isinstance(value, HexBytes) else value
+            key: value.hex() if isinstance(value, HexBytes) else value
             for key, value in transaction.items()
         }
 
