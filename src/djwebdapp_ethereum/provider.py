@@ -116,10 +116,28 @@ class EthereumProvider(Provider):
             address=contract.address,
             abi=contract.abi,
         )
-        fn, args = interface.decode_function_input(call.metadata['input'])
-        call.function = fn.fn_name
-        call.args = args
+
+        if self.is_smart_contract_transfer_only(call):
+            call.function = 'receive'
+            call.amount = self.client.from_wei(call.metadata['value'], 'ether')
+        else:
+            fn, args = interface.decode_function_input(call.metadata['input'])
+            call.function = fn.fn_name
+            call.args = args
+
         call.state_set('done')
+
+    def is_smart_contract_transfer_only(self, call):
+        """
+        You can send ETH to smart contract without calling a method by implementing
+        a `receive` or `fallback` function. In which case, the input value is
+        always '0x' (no data sent to the contract).
+
+        This method returns `True` if the transaction is such a call.
+
+        More information here: https://ethereum.stackexchange.com/questions/130936/contract-write-function-has-no-input-data0x
+        """  # noqa: E501
+        return call.metadata['input'] == '0x'
 
     def json(self, transaction):
         return {

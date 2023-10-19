@@ -20,4 +20,7 @@ contract FA12 {
         _totalSupply += amount;
         _balances[account] += amount;
     }
+
+    receive() external payable {
+    }
 }
