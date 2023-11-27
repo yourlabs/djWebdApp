@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  ethlocal:
+    container_name: ethlocal
+    volumes:
+    - /root
+    image: ethereum/client-go
+    command: --dev --networkid=17 --nodiscover --maxpeers=0 --http --http.addr 0.0.0.0 --http.corsdomain "*" --http.vhosts "*" --http.api "eth,net,web3,personal,miner" --miner.gasprice 0 --ws --ws.addr 0.0.0.0 --nousb --gcmode archive --datadir=/root/.ethereum
+    ports:
+    - 0.0.0.0:8545:8545
+    - 0.0.0.0:8546:8546
+    - 0.0.0.0:30303:30303
+
+  django:
+    restart: always
+    user: root
+    volumes:
+    - .:/app
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: tail -f /dev/null
+    ports:
+      - "8000:8000"
