@@ -1134,6 +1134,23 @@ class Event(models.Model):
     def contract_subclass(self):
         return self.transaction.contract_subclass()
 
+    def normalize(self):
+        contract = self.contract_subclass()
+
+        if not contract:
+            return
+
+        normalizer = contract.normalizer_get()
+        if not normalizer:
+            return
+
+        try:
+            normalizer.normalize_event(self, contract)
+        except Exception:
+            contract.provider.logger.exception('Exception in event normalizer')
+        else:
+            self.normalized = True
+            self.save()
 
 @receiver(signals.post_save)
 def dependency_graph(sender, instance, **kwargs):
