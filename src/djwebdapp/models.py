@@ -1119,6 +1119,20 @@ class Event(models.Model):
         blank=True,
     )
     event_index = models.PositiveBigIntegerField()
+    transaction = models.ForeignKey(
+        Transaction,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="transactionevent_set",
+    )
+    normalized = models.BooleanField(
+        default=False,
+    )
+
+    objects = InheritanceManager()
+
+    def contract_subclass(self):
+        return self.transaction.contract_subclass()
 
 
 @receiver(signals.post_save)
