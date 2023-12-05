@@ -141,8 +141,6 @@ class EthereumEvent(Event):
         on_delete=models.CASCADE,
         related_name="contractevent_set",
     )
-    transaction = models.ForeignKey(
-        EthereumTransaction,
-        on_delete=models.CASCADE,
-        related_name="transactionevent_set",
-    )
+
+    def contract_subclass(self):
+        return Transaction.objects.get_subclass(pk=self.contract.pk)
