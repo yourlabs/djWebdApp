@@ -9,11 +9,21 @@ from djwebdapp.models import Account
 from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from djwebdapp.provider import Provider
 
+import logging
+
+from hexbytes import HexBytes
+from web3 import Web3
+
+from django.conf import settings
+
+from djwebdapp.models import Account
+from djwebdapp_ethereum.models import EthereumTransaction
+from djwebdapp.provider import Provider
+
 
 class EthereumProvider(Provider):
     logger = logging.getLogger('djwebdapp_ethereum')
     transaction_class = EthereumTransaction
-    event_class = EthereumEvent
 
     def generate_secret_key(self):
         wallet = self.client.eth.account.create()
@@ -24,7 +34,6 @@ class EthereumProvider(Provider):
         For non-mainnet chains, the client needs to activate an onion
         middleware. See:
         https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
-
         This method checks whether, given the blockchain endpoint, this
         middleware should be activated
         """  # noqa: E501
@@ -63,74 +72,14 @@ class EthereumProvider(Provider):
         """
         return self.client.eth.get_block_number()
 
-    def index_init(self):
-        super().index_init()
-        event_filter = {
-            'fromBlock': self.blockchain.index_level,
-            'toBlock': self.head,
-            'address': self.addresses,
-        }
-        self.logs = self.client.eth.get_logs(event_filter)
-
     def index_level(self, level):
-        """
-        To optimize for compute units on Alchemy/Moralis nodes, we:
-        1. filter logs fetched for a range of level at init to restrict them to the
-           current level
-        2. only query the full block to index relevant transactions if:
-           a. a log is included at the current level in which case we index both the log
-              and the parent transaction. Since the log could have been emitted from a
-              transaction that was not originated from an indexed contract, we still
-              index that transaction to be able to retrieve it later on.
-           b. a transaction that was spooled is awaiting indexing to ensure it was
-              included on-chain (contract origination, spooled contract call, etc).
-
-        As such, no node requests should be made if there are no spooled transactions
-        awaiting confirmation nor any events were emitted at the current level.
-        """
-        logs_at_level = list(filter(
-            lambda log: log["blockNumber"] == level,
-            self.logs,
-        ))
-        logs_tx_hash = [log["transactionHash"].hex() for log in logs_at_level]
-        if len(logs_at_level) or len(self.hashes):
-            block = self.client.eth.get_block(level, True)
-            for transaction in block.transactions:
-                to = transaction.get('to', None)
-                if to is None and transaction['hash'].hex() in self.hashes:
-                    self.index_contract(level, transaction)
-                elif to in self.addresses or transaction['hash'].hex() in logs_tx_hash:
-                    self.index_call(level, transaction)
-
-        for log in logs_at_level:
-            if not log["removed"]:
-                self.index_log(log)
-
-    def get_contract_event_names(self, contract_abi):
-        events = []
-        for entry in contract_abi:
-            if "type" in entry and entry["type"] == "event" and "name" in entry:
-                events.append(entry["name"])
-        return events
-
-    def index_log(self, log):
-        transaction = self.transaction_class.objects.get(
-            hash=log["transactionHash"].hex(),
-        )
-
-        contract = self.transaction_class.objects.filter(address=log["address"]).first().contract_subclass()
-        contract_ci = self.client.eth.contract(address=contract.address, abi=contract.abi)
-        event_names = self.get_contract_event_names(contract_ci.abi)
-        for event_name in event_names:
-            event = getattr(contract_ci.events, event_name)
-            event_data = event().process_receipt({"logs": [log]})
-            if event_data:
-                self.event_class.objects.update_or_create(
-                    contract=contract,
-                    transaction=transaction,
-                    args=event_data[0]["args"],
-                    event_index=event_data[0]["logIndex"],
-                )
+        block = self.client.eth.get_block(level, True)
+        for transaction in block.transactions:
+            to = transaction.get('to', None)
+            if to is None and self.check_hash(transaction['hash'].hex()):
+                self.index_contract(level, transaction)
+            elif to in self.addresses:
+                self.index_call(level, transaction)
 
     def index_contract(self, level, transaction):
         self.logger.info(f'Syncing origination {transaction["hash"]}')
@@ -145,10 +94,19 @@ class EthereumProvider(Provider):
 
     def index_call(self, level, transaction):
         self.logger.info(f'EthereumProvider.index_call({transaction})')
-        contract = EthereumTransaction.objects.get(
+
+        contract = EthereumTransaction.objects.filter(
             blockchain=self.blockchain,
             address=transaction['to'],
-        )
+        ).first()
+
+        if not contract:
+            contract = EthereumTransaction.objects.create(
+                blockchain=self.blockchain,
+                address=transaction['to'],
+                index=False,
+            )
+
         call = contract.call_set.select_subclasses().filter(
             hash=transaction['hash'].hex(),
         ).first()
@@ -173,15 +131,16 @@ class EthereumProvider(Provider):
             address=transaction['from'],
             blockchain=self.blockchain,
         )
-        interface = self.client.eth.contract(
-            address=contract.address,
-            abi=contract.abi,
-        )
+        if contract.abi:
+            interface = self.client.eth.contract(
+                address=contract.address,
+                abi=contract.abi,
+            )
 
         if self.is_smart_contract_transfer_only(call):
             call.function = 'receive'
             call.amount = self.client.from_wei(call.metadata['value'], 'ether')
-        else:
+        elif contract.abi:
             fn, args = interface.decode_function_input(call.metadata['input'])
             call.function = fn.fn_name
             call.args = args
@@ -313,3 +272,160 @@ class EthereumProvider(Provider):
         return self.client.to_hex(
             self.client.keccak(signed_txn.rawTransaction)
         )
+
+
+class EthereumEventProvider(EthereumProvider):
+    event_class = EthereumEvent
+
+    def index_init(self):
+        super().index_init()
+        self.contracts = self.contracts.exclude(
+            abi=None,
+        )
+
+        self.addresses = self.contracts.values_list(
+            'address',
+            flat=True,
+        )
+
+        head = self.head
+
+        event_filter = {
+            'fromBlock': self.blockchain.index_level or 0,
+            'toBlock': head,
+            'address': self.addresses,
+        }
+
+        try:
+            logs = self.client.eth.get_logs(event_filter)
+        except:
+            logs = []
+            init_level = self.blockchain.index_level or 0
+            number_of_levels_to_increment = self.blockchain.configuration.get('number_of_levels_to_increment', 50)
+
+            while init_level < head:
+                to_block = min(init_level + number_of_levels_to_increment, head)
+                event_filter['fromBlock'] = init_level
+                event_filter['toBlock'] = to_block
+                logs += self.client.eth.get_logs(event_filter)
+                init_level = to_block + 1
+
+        self.logs = logs
+
+    def get_min_level(self, items, key):
+        return min((item[key] for item in items), default=None)
+
+    def index(self):
+        self.index_init()
+
+        while len(self.hashes) or len(self.logs):
+            index_of_level_in_hashes_tuple = 1
+            min_level_hashes = self.get_min_level(
+                self.hashes,
+                key=index_of_level_in_hashes_tuple,
+            )
+            min_level_logs = self.get_min_level(
+                self.logs,
+                key='blockNumber',
+            )
+
+            level_to_index = min(filter(None, [min_level_hashes, min_level_logs]))
+
+            self.logger.info(f'Indexing level {level_to_index}')
+            self.index_level(level_to_index)
+            self.blockchain.index_level = level_to_index
+        self.blockchain.save()
+
+    def index_level(self, level):
+        """
+        To optimize for compute units on Alchemy/Moralis nodes, we:
+        1. filter logs fetched for a range of level at init to restrict them to the
+           current level
+        2. only query the full block to index relevant transactions if:
+           a. a log is included at the current level in which case we index both the log
+              and the parent transaction. Since the log could have been emitted from a
+              transaction that was not originated from an indexed contract, we still
+              index that transaction to be able to retrieve it later on.
+           b. a transaction that was spooled is awaiting indexing to ensure it was
+              included on-chain (contract origination, spooled contract call, etc).
+
+        As such, no node requests should be made if there are no spooled transactions
+        awaiting confirmation nor any events were emitted at the current level.
+        """
+        logs_at_level = list(filter(
+            lambda log: log["blockNumber"] == level,
+            self.logs,
+        ))
+        logs_tx_hash = [log["transactionHash"].hex() for log in logs_at_level]
+
+        hashes_at_level = list(filter(
+            lambda hash_tuple: hash_tuple[1] == level,
+            self.hashes,
+        ))
+        hashes = [hash_tuple[0] for hash_tuple in hashes_at_level]
+
+        if len(hashes):
+            block = self.client.eth.get_block(level, True)
+            for transaction in block.transactions:
+                to = transaction.get('to', None)
+                if to is None and transaction['hash'].hex() in hashes:
+                    self.index_contract(level, transaction)
+                elif to in self.addresses or (transaction['hash'].hex() in logs_tx_hash and to):
+                    self.index_call(level, transaction)
+
+        for log in logs_at_level:
+            if not log["removed"]:
+                self.index_log(log)
+
+        self.hashes = list(filter(
+            lambda hash_tuple: hash_tuple[1] > level,
+            self.hashes,
+        ))
+
+        self.logs = list(filter(
+            lambda log: log['blockNumber'] != level,
+            self.logs
+        ))
+
+    def get_contract_event_names(self, contract_abi):
+        events = []
+        for entry in contract_abi:
+            if "type" in entry and entry["type"] == "event" and "name" in entry:
+                events.append(entry["name"])
+        return events
+
+    def index_log(self, log):
+        # In case of it's a log for the contract creation, right now it
+        # will not be indexed by 'index_call' or 'index_contract' methods
+        # so the transaction is not created
+        # So right now I return if the tx not exists
+
+        transaction, created = self.transaction_class.objects.get_or_create(
+            blockchain=self.blockchain,
+            hash=log["transactionHash"].hex(),
+        )
+
+        is_contract_deployment_tx = 'to' not in log
+
+        if created and is_contract_deployment_tx:
+            transaction.state = 'done'
+
+            if is_contract_deployment_tx:
+                transaction.index = False
+
+            transaction.save()
+
+        contract = self.transaction_class.objects.filter(address=log["address"]).first().contract_subclass()
+        contract_ci = self.client.eth.contract(address=contract.address, abi=contract.abi)
+        event_names = self.get_contract_event_names(contract_ci.abi)
+        for event_name in event_names:
+            event = getattr(contract_ci.events, event_name)
+            event_data = event().process_receipt({"logs": [log]})
+            if event_data:
+                self.event_class.objects.update_or_create(
+                    name=event_name,
+                    contract=contract,
+                    transaction=transaction,
+                    args=event_data[0]["args"],
+                    event_index=event_data[0]["logIndex"],
+                )
