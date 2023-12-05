@@ -25,3 +25,11 @@ class Normalizer:
         callback = getattr(normalizer, callback_name, None)
         if callback:
             callback(transaction, contract)
+
+    @classmethod
+    def normalize_event(cls, event, contract):
+        normalizer = cls()
+        callback_name = event.name
+        callback = getattr(normalizer, callback_name, None)
+        if callback:
+            callback(event, contract)

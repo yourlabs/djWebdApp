@@ -5,7 +5,7 @@ import random
 from django import db
 from django.db.models import Q
 
-from djwebdapp.models import Transaction
+from djwebdapp.models import Event, Transaction
 
 
 def call_deploy(arg):
@@ -488,6 +488,12 @@ class Provider:
             for internal in internal_calls_qs.all():
                 internal.normalize()
 
+        def normalize_event(event):
+            if event.normalized:
+                return
+
+            event.normalize()
+
         transactions = self.transaction_class.objects.filter(
             normalized=False,
             caller=None,
@@ -499,6 +505,9 @@ class Provider:
         for transaction in transactions:
             transaction.normalize()
             normalize_internal(transaction)
+            for event in transaction.transactionevent_set.all():
+                event_subclass = Event.objects.get_subclass(pk=event.pk)
+                normalize_event(event_subclass)
 
     def get_balance(self, address=None):
         """
