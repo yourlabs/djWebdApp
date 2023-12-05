@@ -1,7 +1,12 @@
 from djwebdapp.models import Account
 from djwebdapp.normalizers import Normalizer
 
-from djwebdapp_example_ethereum.models import FA12Ethereum, FA12EthereumMint, FA12EthereumBalance
+from djwebdapp_example_ethereum.models import (
+    FA12Ethereum,
+    FA12EthereumMint,
+    FA12EthereumBalance,
+    FA12EthereumBalanceMovement,
+)
 
 
 class FA12EthereumNormalizer(Normalizer):
@@ -23,3 +28,25 @@ class FA12EthereumNormalizer(Normalizer):
         )
         balance.balance += call.mint_amount
         balance.save()
+
+
+class FA12EthereumEventNormalizer(Normalizer):
+    def Mint(self, event, contract):
+        account, _ = Account.objects.get_or_create(
+            address=event.args['to_'],
+            blockchain=contract.blockchain,
+        )
+        FA12EthereumBalanceMovement.objects.update_or_create(
+            event=event,
+            defaults=dict(
+                fa12=contract,
+                account=account,
+                amount=event.args['amount_'],
+            )
+        )
+
+    def Mint__reorg(self, event, contract):
+        balance_movement = FA12EthereumBalanceMovement.objects.get(
+            event=event,
+        )
+        balance_movement.delete()

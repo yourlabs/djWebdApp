@@ -36,3 +36,17 @@ def blockchain(head):
     )
     blockchain.node_set.get_or_create(endpoint='http://ethlocal:8545')
     return blockchain
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def blockchain_with_event_provider(head):
+    blockchain, _ = Blockchain.objects.get_or_create(
+        name='Ethereum Local with event provider',
+        provider_class='djwebdapp_ethereum.provider.EthereumEventProvider',
+        defaults=dict(
+            min_confirmations=0,
+        ),
+    )
+    blockchain.node_set.get_or_create(endpoint='http://ethlocal:8545')
+    return blockchain
