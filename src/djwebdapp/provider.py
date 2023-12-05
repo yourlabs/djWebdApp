@@ -172,11 +172,12 @@ class Provider:
 
         Provisions
         """
-        self.hashes = self.transaction_class.objects.filter(
+        self.hashes = list(self.transaction_class.objects.filter(
             blockchain=self.blockchain
         ).filter(
             Q(state='confirm') | ~Q(hash=None)
-        ).values_list('hash', flat=True)
+        ).values_list('hash', 'level'))
+
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
         self.contracts = self.transaction_class.objects.filter(
@@ -193,6 +194,12 @@ class Provider:
             flat=True,
         )
         self.logger.info(f'Found {len(self.addresses)} addresses to index')
+
+    def check_hash(self, hash_to_check):
+        """
+        Returns True if hash is in self.hashes
+        """
+        return any(hash_to_check == hash for hash, _ in self.hashes)
 
     def deploy(self, transaction):
         """
