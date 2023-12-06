@@ -29,8 +29,6 @@ class FA12EthereumNormalizer(Normalizer):
         balance.balance += call.mint_amount
         balance.save()
 
-
-class FA12EthereumEventNormalizer(Normalizer):
     def Mint(self, event, contract):
         account, _ = Account.objects.get_or_create(
             address=event.args['to_'],
@@ -47,6 +45,7 @@ class FA12EthereumEventNormalizer(Normalizer):
 
     def Mint__reorg(self, event, contract):
         balance_movement = FA12EthereumBalanceMovement.objects.get(
+            fa12=contract,
             event=event,
         )
         balance_movement.delete()
