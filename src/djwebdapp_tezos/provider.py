@@ -54,8 +54,6 @@ class TezosProvider(Provider):
                 for content in op.get('contents', []):
                     self.index_content(level, number, op, content)
 
-
-
     def index_content(self, level, number, op, content):
         self.logger.info(f'Indexing content {number}@{level} {op["hash"]}')
         # index content normally
