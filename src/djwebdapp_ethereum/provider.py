@@ -311,6 +311,12 @@ class EthereumEventProvider(EthereumProvider):
         return min((item[key] for item in items), default=None)
 
     def index(self):
+        """
+        Index EVM blockchains.
+
+        Iterate over each level that included txs and events
+        related to indexed contracts.
+        """
         self.index_init()
 
         while len(self.hashes) or len(self.logs):
@@ -336,15 +342,18 @@ class EthereumEventProvider(EthereumProvider):
     def index_level(self, level):
         """
         To optimize for compute units on Alchemy/Moralis nodes, we:
-        1. filter logs fetched for a range of level at init to restrict them
+
+        #. Filter logs fetched for a range of level at init to restrict them
            to the current level
-        2. only query the full block to index relevant transactions if:
-           a. a log is included at the current level in which case we index
+
+        #. only query the full block to index relevant transactions if:
+
+           #. a log is included at the current level in which case we index
               both the log and the parent transaction. Since the log could
               have been emitted from a transaction that was not originated
               from an indexed contract, we still index that transaction to
               be able to retrieve it later on.
-           b. a transaction that was spooled is awaiting indexing to ensure
+           #. a transaction that was spooled is awaiting indexing to ensure
               it was included on-chain (contract origination,
               spooled contract call, etc).
 
