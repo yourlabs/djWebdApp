@@ -18,8 +18,6 @@ from picklefield.fields import PickledObjectField
 from fernet_fields import EncryptedTextField
 from model_utils.managers import InheritanceManager
 
-from picklefield.fields import PickledObjectField
-
 
 SETTINGS = dict(
     PROVIDERS=(
@@ -1151,6 +1149,7 @@ class Event(models.Model):
         else:
             self.normalized = True
             self.save()
+
 
 @receiver(signals.post_save)
 def dependency_graph(sender, instance, **kwargs):
