@@ -59,6 +59,9 @@ def test_normalize(include, blockchain_with_event_provider, client):
     token_proxy = deploy_token_proxy(token.sender)
     call_token_proxy(token.sender, token_proxy, token)
 
+    # Need to wait spooling before indexing
+    time.sleep(1)
+
     blockchain_with_event_provider.provider.index()
     assert EthereumEvent.objects.count() == 5
     assert EthereumEvent.objects.filter(contract=token_proxy).count() == 2
@@ -81,10 +84,12 @@ def test_event_normalization(include, blockchain_with_event_provider, client):
 
     assert EthereumEvent.objects.count() == 0
 
+    # Avoid race condition need to wait spooling before indexing
+    time.sleep(1)
+
     blockchain_with_event_provider.provider.index()
     blockchain_with_event_provider.provider.normalize()
 
-    breakpoint()
     assert EthereumEvent.objects.count() == 5
     assert EthereumEvent.objects.filter(contract=token).count() == 3
 

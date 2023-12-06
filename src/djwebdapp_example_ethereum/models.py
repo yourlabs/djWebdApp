@@ -9,7 +9,7 @@ from djwebdapp_ethereum.models import (
 
 class FA12Ethereum(EthereumContract):
     contract_name = 'FA12'
-    normalizer_class = 'FA12EthereumEventNormalizer'
+    normalizer_class = 'FA12EthereumNormalizer'
 
     token_name = models.CharField(max_length=200)
     token_symbol = models.CharField(max_length=10)
