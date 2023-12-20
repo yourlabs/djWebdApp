@@ -176,6 +176,8 @@ class Provider:
             blockchain=self.blockchain
         ).filter(
             Q(state='confirm') | ~Q(hash=None)
+        ).exclude(
+            state='done'
         ).values_list('hash', 'level'))
 
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
