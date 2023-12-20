@@ -18,8 +18,6 @@ from picklefield.fields import PickledObjectField
 from fernet_fields import EncryptedTextField
 from model_utils.managers import InheritanceManager
 
-from picklefield.fields import PickledObjectField
-
 
 SETTINGS = dict(
     PROVIDERS=(
@@ -1119,6 +1117,38 @@ class Event(models.Model):
         blank=True,
     )
     event_index = models.PositiveBigIntegerField()
+    transaction = models.ForeignKey(
+        Transaction,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="transactionevent_set",
+    )
+    normalized = models.BooleanField(
+        default=False,
+    )
+
+    objects = InheritanceManager()
+
+    def contract_subclass(self):
+        return self.transaction.contract_subclass()
+
+    def normalize(self):
+        contract = self.contract_subclass()
+
+        if not contract:
+            return
+
+        normalizer = contract.normalizer_get()
+        if not normalizer:
+            return
+
+        try:
+            normalizer.normalize_event(self, contract)
+        except Exception:
+            contract.provider.logger.exception('Exception in event normalizer')
+        else:
+            self.normalized = True
+            self.save()
 
 
 @receiver(signals.post_save)

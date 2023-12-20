@@ -1,6 +1,7 @@
 import pytest
-
-from tests.ethereum.conftest import blockchain
+import time
+from unittest import mock
+from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 
 
 def get_contract_events(contract_abi):
@@ -11,7 +12,6 @@ def get_contract_events(contract_abi):
     return events
 
 
-from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 def deploy_token_proxy(sender):
     with (
         open("./src/djwebdapp_example_ethereum/contracts/Caller.bin") as bytecode,
@@ -46,20 +46,70 @@ def call_token_proxy(sender, token_proxy, token):
 
 
 @pytest.mark.django_db
-def test_normalize(include, blockchain, client):
+def test_normalize(include, blockchain_with_event_provider, client):
     variables = include(
         'djwebdapp_example_ethereum',
         'client',
-        'blockchain',
+        'blockchain_with_event_provider',
         'account',
         'deploy_model',
     )
 
-    token = blockchain.transaction_set.exclude(address=None).first().contract_subclass()
+    token = blockchain_with_event_provider.transaction_set.exclude(address=None).first().contract_subclass()
     token_proxy = deploy_token_proxy(token.sender)
     call_token_proxy(token.sender, token_proxy, token)
 
-    blockchain.provider.index()
+    # Need to wait spooling before indexing
+    time.sleep(1)
+
+    blockchain_with_event_provider.provider.index()
     assert EthereumEvent.objects.count() == 5
     assert EthereumEvent.objects.filter(contract=token_proxy).count() == 2
     assert EthereumEvent.objects.filter(contract=token).count() == 3
+
+
+@pytest.mark.django_db
+def test_event_normalization(include, blockchain_with_event_provider, client):
+    variables = include(
+        'djwebdapp_example_ethereum',
+        'client',
+        'blockchain_with_event_provider',
+        'account',
+        'deploy_model',
+    )
+
+    token = blockchain_with_event_provider.transaction_set.exclude(address=None).first().contract_subclass()
+    token_proxy = deploy_token_proxy(token.sender)
+    call_token_proxy(token.sender, token_proxy, token)
+
+    assert EthereumEvent.objects.count() == 0
+
+    # Avoid race condition need to wait spooling before indexing
+    time.sleep(1)
+
+    blockchain_with_event_provider.provider.index()
+    blockchain_with_event_provider.provider.normalize()
+
+    assert EthereumEvent.objects.count() == 5
+    assert EthereumEvent.objects.filter(contract=token).count() == 3
+
+    assert EthereumEvent.objects.filter(
+        contract=token,
+        transaction__function='mint',
+    ).count() == 2
+
+    assert EthereumEvent.objects.filter(
+        contract=token,
+        transaction__function='mintProxy',
+    ).count() == 1
+
+    mint_event_from_proxy = EthereumEvent.objects.get(
+        contract=token,
+        transaction__function='mintProxy',
+    )
+
+    assert mint_event_from_proxy.fa12_balance_movements.count() == 1
+    assert mint_event_from_proxy.fa12_balance_movements.first().amount == 10
+
+    assert token.fa12ethereumbalance_set.count() == 1
+    assert token.fa12ethereumbalance_set.first().balance == 310

@@ -5,7 +5,7 @@ import random
 from django import db
 from django.db.models import Q
 
-from djwebdapp.models import Transaction
+from djwebdapp.models import Event, Transaction
 
 
 def call_deploy(arg):
@@ -172,11 +172,14 @@ class Provider:
 
         Provisions
         """
-        self.hashes = self.transaction_class.objects.filter(
+        self.hashes = list(self.transaction_class.objects.filter(
             blockchain=self.blockchain
         ).filter(
             Q(state='confirm') | ~Q(hash=None)
-        ).values_list('hash', flat=True)
+        ).exclude(
+            state='done'
+        ).values_list('hash', 'level'))
+
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
 
         self.contracts = self.transaction_class.objects.filter(
@@ -193,6 +196,12 @@ class Provider:
             flat=True,
         )
         self.logger.info(f'Found {len(self.addresses)} addresses to index')
+
+    def check_hash(self, hash_to_check):
+        """
+        Returns True if hash is in self.hashes
+        """
+        return any(hash_to_check == hash for hash, _ in self.hashes)
 
     def deploy(self, transaction):
         """
@@ -481,6 +490,12 @@ class Provider:
             for internal in internal_calls_qs.all():
                 internal.normalize()
 
+        def normalize_event(event):
+            if event.normalized:
+                return
+
+            event.normalize()
+
         transactions = self.transaction_class.objects.filter(
             normalized=False,
             caller=None,
@@ -492,6 +507,9 @@ class Provider:
         for transaction in transactions:
             transaction.normalize()
             normalize_internal(transaction)
+            for event in transaction.transactionevent_set.all():
+                event_subclass = Event.objects.get_subclass(pk=event.pk)
+                normalize_event(event_subclass)
 
     def get_balance(self, address=None):
         """

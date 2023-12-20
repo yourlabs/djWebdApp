@@ -66,7 +66,7 @@ class TezosProvider(Provider):
             address = result['originated_contracts'][0]
             if (
                 address not in self.addresses
-                and hash not in self.hashes
+                and not self.check_hash(hash)
             ):
                 # skip unknown contract originations
                 return
@@ -75,7 +75,7 @@ class TezosProvider(Provider):
             content['kind'] == 'transaction'
             and (
                 content.get('destination', None) in self.addresses
-                or hash in self.hashes
+                or self.check_hash(hash)
             )
         ):
             self.index_call(level, op, content, number=number)
