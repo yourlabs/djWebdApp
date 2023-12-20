@@ -423,10 +423,11 @@ class EthereumEventProvider(EthereumProvider):
 
         is_contract_deployment_tx = 'to' not in log
 
-        if created and is_contract_deployment_tx:
-            transaction.state = 'done'
+        if created:
+            transaction.level = log["blockNumber"]
 
             if is_contract_deployment_tx:
+                transaction.state = 'done'
                 transaction.index = False
 
             transaction.save()
