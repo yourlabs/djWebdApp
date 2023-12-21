@@ -434,7 +434,7 @@ class EthereumEventProvider(EthereumProvider):
 
         contract = self.transaction_class.objects.filter(
             address=log["address"]
-        ).first().contract_subclass()
+        ).first()
         contract_ci = self.client.eth.contract(
             address=contract.address,
             abi=contract.abi,
