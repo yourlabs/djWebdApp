@@ -37,7 +37,9 @@ docs:
 # the inside.
 test:
   stage: test
-  script: py.test -sv --cov=/app/src  --cov-report xml --cov-report term-missing tests
+  script:
+    - python -c "import web3; print(web3.__version__)"
+    - py.test -sv --cov=/app/src  --cov-report xml --cov-report term-missing tests
   image: $CI_REGISTRY_IMAGE:${CI_COMMIT_SHORT_SHA}
 
   variables:

@@ -416,9 +416,12 @@ class EthereumEventProvider(EthereumProvider):
         # so the transaction is not created
         # So right now I return if the tx not exists
 
-        transaction, created = self.transaction_class.objects.get_or_create(
+        transaction, created = self.transaction_class.objects.update_or_create(
             blockchain=self.blockchain,
             hash=log["transactionHash"].hex(),
+            defaults=dict(
+                level=log["blockNumber"],
+            )
         )
 
         is_contract_deployment_tx = 'to' not in log
