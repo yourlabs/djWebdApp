@@ -2,6 +2,7 @@ import logging
 
 from hexbytes import HexBytes
 from web3 import Web3
+from web3.exceptions import ContractLogicError
 
 from django.conf import settings
 
@@ -186,7 +187,7 @@ class EthereumProvider(Provider):
                 args[i] = self.client.to_bytes(hexstr=args[i])
 
         tx = func(*args)
-        transaction.hash = self.write_transaction(transaction.sender, tx)
+        transaction.hash = self.write_transaction(transaction, tx)
 
     def deploy(self, transaction):
         self.logger.debug(f'{transaction}.deploy(): start')
@@ -237,21 +238,24 @@ class EthereumProvider(Provider):
         )
 
         tx = Contract.constructor(*transaction.get_args())
-        transaction.hash = self.write_transaction(transaction.sender, tx)
+        transaction.hash = self.write_transaction(transaction, tx)
         receipt = self.client.eth.wait_for_transaction_receipt(
             transaction.hash)
         transaction.address = receipt.contractAddress
 
-    def write_transaction(self, sender, tx):
+    def write_transaction(self, djwebdapp_transaction, tx):
+        sender = djwebdapp_transaction.sender
         nonce = self.client.eth.get_transaction_count(sender.address)
         options = {
             'from': sender.address,
             'nonce': nonce,
         }
-        options['gas'] = self.client.eth.estimate_gas(
-            tx.build_transaction(options)
-        )
-        built = tx.build_transaction(options)
+        try:
+            built = tx.build_transaction(options)
+        except ContractLogicError as e:
+            djwebdapp_transaction.error = e.message
+            raise e
+        options['gas'] = self.client.eth.estimate_gas(built)
         signed_txn = self.client.eth.account.sign_transaction(
             built,
             private_key=sender.get_secret_key(),

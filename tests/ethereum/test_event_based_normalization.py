@@ -1,7 +1,8 @@
 import pytest
 import time
 from unittest import mock
-from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
+from djwebdapp_ethereum.models import EthereumEvent
+from tests.ethereum import call_token_proxy, deploy_token_proxy
 
 
 def get_contract_events(contract_abi):
@@ -10,39 +11,6 @@ def get_contract_events(contract_abi):
         if "type" in entry and entry["type"] == "event" and "name" in entry:
             events.append(entry["name"])
     return events
-
-
-def deploy_token_proxy(sender):
-    with (
-        open("./src/djwebdapp_example_ethereum/contracts/Caller.bin") as bytecode,
-        open("./src/djwebdapp_example_ethereum/contracts/Caller.abi") as abi,
-    ):
-        contract = EthereumTransaction.objects.create(
-            blockchain=sender.blockchain,
-            sender=sender,
-            state='deploy',
-            bytecode=bytecode.read(),
-            abi=abi.read(),
-            args=[],
-        )
-    sender.blockchain.provider.spool()
-    contract.refresh_from_db()
-    return contract
-
-# Create a call that should deploy afterwards on that contract
-def call_token_proxy(sender, token_proxy, token):
-    EthereumTransaction.objects.create(
-        sender=sender,
-        state='deploy',
-        contract=token_proxy,
-        function='mintProxy',
-        args=(
-            token.address,
-            sender.address,
-            10,
-        ),
-    )
-    sender.blockchain.provider.spool()
 
 
 @pytest.mark.django_db
