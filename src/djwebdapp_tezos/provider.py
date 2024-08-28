@@ -1,6 +1,7 @@
 from decimal import Decimal
 import logging
 import requests
+import time
 import urllib
 
 from django.db.models import Q, signals
@@ -297,13 +298,20 @@ class TezosProvider(Provider):
             raise ValidationError(
                 f'{transaction.sender.address} needs more than 0 tezies')
         elif not self.wallet.revealed:
-            try:
-                self.client.reveal().send(min_confirmations=1)
-            except RpcError as exc:
-                if len(exc.args) > 1:
-                    raise
+            tries = 100
+            while tries:
+                try:
+                    self.client.reveal().send(min_confirmations=1)
+                except RpcError as exc:
+                    if len(exc.args) > 1:
+                        raise
 
-                if not exc.args[0]['id'].endswith('previously_revealed_key'):
+                    if exc.args[0]['id'].endswith('previously_revealed_key'):
+                        break
+                    elif tries and exc.args[0]['kind'] == 'temporary':
+                        tries -= 1
+                        time.sleep(1)
+                        continue
                     raise
             self.wallet.revealed = True
             self.wallet.save()
