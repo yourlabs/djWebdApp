@@ -41,8 +41,8 @@ class EthereumProvider(Provider):
             client.eth.default_account = client.eth.accounts[0]
 
         if self.should_activate_client_middleware(endpoint):
-            from web3.middleware import geth_poa_middleware
-            client.middleware_onion.inject(geth_poa_middleware, layer=0)
+            from web3.middleware import ExtraDataToPOAMiddleware
+            client.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
         return client
 
@@ -225,9 +225,9 @@ class EthereumProvider(Provider):
             tx,
             private_key=transaction.sender.get_secret_key(),
         )
-        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
+        self.client.eth.send_raw_transaction(signed_txn.raw_transaction)
         return self.client.to_hex(
-            self.client.keccak(signed_txn.rawTransaction)
+            self.client.keccak(signed_txn.raw_transaction)
         )
 
     def originate(self, transaction):
@@ -257,9 +257,9 @@ class EthereumProvider(Provider):
             private_key=sender.get_secret_key(),
         )
 
-        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
+        self.client.eth.send_raw_transaction(signed_txn.raw_transaction)
         return self.client.to_hex(
-            self.client.keccak(signed_txn.rawTransaction)
+            self.client.keccak(signed_txn.raw_transaction)
         )
 
 
