@@ -427,6 +427,7 @@ class EthereumEventProvider(EthereumProvider):
                 level=log["blockNumber"],
             )
         )
+        transaction.state_set("done")
 
         is_contract_deployment_tx = 'to' not in log
 
