@@ -8,11 +8,13 @@ extras_require = dict(
         'pytest',
         'pytest-cov',
         'pytest-django',
-        'web3>=6.7.0,<=6.15.1',
+        'web3>=6.7.0,<=6.20',
+        'eth-typing<5',
     ],
     ethereum=[
         #'web3>=6.7.0',  # no [dev] for persistent deployments
-        'web3>=6.7.0,<=6.15.1',
+        'web3>=6.7.0,<=6.20',
+        'eth-typing<5',
     ],
     tezos=[
         'pytezos>3.4',
