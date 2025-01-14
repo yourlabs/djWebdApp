@@ -5,6 +5,19 @@ from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from tests.ethereum import call_token_proxy, deploy_token_proxy
 
 
+def mint_non_indexed_blocks(client, num_blocks=2):
+    # create non indexed blocks since wallet
+    # non spooled ETH transfers are not indexed.
+    for _ in range(num_blocks):
+        client.eth.send_transaction(
+            dict(
+                to=client.eth.default_account,
+                value=client.to_wei(1, "ether"),
+            )
+        )
+
+
+
 def get_contract_events(contract_abi):
     events = []
     for entry in contract_abi:
@@ -46,9 +59,13 @@ def test_index_event_with_not_spooled_transaction(include, blockchain_with_event
         'account',
         'deploy_model',
     )
+    fa2_contract = variables['contract']
+    client = variables['client']
+
+    fa2_contract.blockchain.min_confirmations = 2
+    fa2_contract.blockchain.save()
 
     # emit non spooled transaction
-    fa2_contract = variables['contract']
     hash = variables['client'].eth.contract(
         abi=fa2_contract.abi,
         address=fa2_contract.address,
@@ -68,6 +85,17 @@ def test_index_event_with_not_spooled_transaction(include, blockchain_with_event
     assert tx.kind == "function"
     assert tx.index is False
     assert tx.transactionevent_set.first().name == "Mint"
+    assert tx.state == "confirm"
+    assert tx.function == None
+
+    mint_non_indexed_blocks(client)
+
+    # Reindexing should set the correct function name
+    fa2_contract.blockchain.provider.index()
+
+    tx.refresh_from_db()
+    assert tx.function == "mint"
+    assert tx.state == "done"
 
 
 @pytest.mark.django_db
@@ -151,19 +179,8 @@ def test_index_eth_spooled_tx(include, blockchain):
     # index blockchain to setup `index_level`
     admin.blockchain.provider.index()
 
-    def mint_non_indexed_blocks(num_blocks=2):
-        # create non indexed blocks since wallet
-        # non spooled ETH transfers are not indexed.
-        for _ in range(num_blocks):
-            client.eth.send_transaction(
-                dict(
-                    to=admin.address,
-                    value=client.to_wei(1, "ether"),
-                )
-            )
-
     # create non indexed blocks
-    mint_non_indexed_blocks()
+    mint_non_indexed_blocks(client)
 
     # create a spooled mint
     mint = FA12EthereumMint.objects.create(
@@ -205,7 +222,7 @@ def test_index_eth_spooled_tx(include, blockchain):
     admin.blockchain.save()
 
     # we mint 2 blocks to save the mint call as `state=done`.
-    mint_non_indexed_blocks()
+    mint_non_indexed_blocks(client)
     admin.blockchain.provider.index()
 
     # indexing should start at oldest `confirm` transaction regardless of the

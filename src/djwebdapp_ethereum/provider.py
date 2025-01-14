@@ -99,7 +99,7 @@ class EthereumProvider(Provider):
                 index=False,
             )
 
-        call = contract.call_set.select_subclasses().filter(
+        call = self.transaction_class.objects.select_subclasses().filter(
             hash=transaction['hash'].hex(),
         ).first()
 
