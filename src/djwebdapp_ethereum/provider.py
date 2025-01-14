@@ -1,5 +1,6 @@
 import logging
 
+from eth_utils.abi import event_abi_to_log_topic
 from hexbytes import HexBytes
 from web3 import Web3
 from web3.exceptions import ContractLogicError
@@ -404,7 +405,7 @@ class EthereumEventProvider(EthereumProvider):
             self.logs
         ))
 
-    def get_contract_event_names(self, contract_abi):
+    def get_contract_event_names(self, contract_abi, encoded_event_name):
         events = []
         for entry in contract_abi:
             if (
@@ -412,7 +413,12 @@ class EthereumEventProvider(EthereumProvider):
                 and entry["type"] == "event"
                 and "name" in entry
             ):
-                events.append(entry["name"])
+                candidate_encoded_event_name = "0x" + event_abi_to_log_topic(
+                    entry,
+                ).hex()
+                if candidate_encoded_event_name == encoded_event_name:
+                    events.append(entry["name"])
+
         return events
 
     def index_log(self, log):
@@ -454,7 +460,12 @@ class EthereumEventProvider(EthereumProvider):
             address=contract.address,
             abi=contract.abi,
         )
-        event_names = self.get_contract_event_names(contract_ci.abi)
+        # first topic encodes event name
+        encoded_log_name = log["topics"][0].hex()
+        event_names = self.get_contract_event_names(
+            contract_ci.abi,
+            encoded_log_name,
+        )
         for event_name in event_names:
             event = getattr(contract_ci.events, event_name)
             event_data = event().process_receipt({"logs": [log]})
