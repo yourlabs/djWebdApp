@@ -1,7 +1,7 @@
 import pytest
 import time
 from unittest import mock
-from djwebdapp_ethereum.models import EthereumEvent
+from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from tests.ethereum import call_token_proxy, deploy_token_proxy
 
 
@@ -34,6 +34,40 @@ def test_normalize(include, blockchain_with_event_provider, client):
     assert EthereumEvent.objects.count() == 5
     assert EthereumEvent.objects.filter(contract=token_proxy).count() == 2
     assert EthereumEvent.objects.filter(contract=token).count() == 3
+
+
+
+@pytest.mark.django_db
+def test_index_event_with_not_spooled_transaction(include, blockchain_with_event_provider, client):
+    variables = include(
+        'djwebdapp_example_ethereum',
+        'client',
+        'blockchain_with_event_provider',
+        'account',
+        'deploy_model',
+    )
+
+    # emit non spooled transaction
+    fa2_contract = variables['contract']
+    hash = variables['client'].eth.contract(
+        abi=fa2_contract.abi,
+        address=fa2_contract.address,
+    ).functions.mint(
+        variables['client'].eth.default_account,
+        10,
+    ).transact()
+    variables['client'].eth.wait_for_transaction_receipt(hash)
+
+    fa2_contract.blockchain.provider.index()
+
+    # ensure that transaction is indexed with correct kind
+    # and that its mint event FK is set.
+    assert fa2_contract.kind == "contract"
+    assert fa2_contract.index is True
+    tx = EthereumTransaction.objects.get(hash=hash.hex())
+    assert tx.kind == "function"
+    assert tx.index is False
+    assert tx.transactionevent_set.first().name == "Mint"
 
 
 @pytest.mark.django_db

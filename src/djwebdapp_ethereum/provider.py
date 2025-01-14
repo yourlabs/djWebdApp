@@ -6,6 +6,7 @@ from web3.exceptions import ContractLogicError
 
 from django.conf import settings
 
+from django.db import transaction as db_transaction
 from djwebdapp.models import Account
 from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from djwebdapp.provider import Provider
@@ -420,20 +421,31 @@ class EthereumEventProvider(EthereumProvider):
         # so the transaction is not created
         # So right now I return if the tx not exists
 
-        transaction, created = self.transaction_class.objects.update_or_create(
-            blockchain=self.blockchain,
-            hash=log["transactionHash"].hex(),
-            defaults=dict(
-                level=log["blockNumber"],
+        with db_transaction.atomic():
+            transaction, created = self.transaction_class.objects.update_or_create(  # noqa: E501
+                blockchain=self.blockchain,
+                hash=log["transactionHash"].hex(),
+                defaults=dict(
+                    level=log["blockNumber"],
+                )
             )
-        )
-        transaction.state_set("done")
+            transaction.state_set("done")
 
-        is_contract_deployment_tx = 'to' not in log
+            if created:
+                """
+                If the transaction was created, then it's from the log of an
+                indexed contract, we consider the original transaction to be
+                a `function` kind which we don't index.
 
-        if created and is_contract_deployment_tx:
-            transaction.index = False
-            transaction.save()
+                This is crucial as it will otherwise by default be saved as
+                an indexed contract. If so, then the indexer will try to
+                index a contract with no address and raise!!
+
+                Hence this must also be in the atomic block.
+                """
+                transaction.kind = "function"
+                transaction.index = False
+                transaction.save()
 
         contract = self.transaction_class.objects.filter(
             address=log["address"]
