@@ -253,6 +253,10 @@ class Blockchain(models.Model):
 
         Optionnal description for this blockchain.
 
+    .. py:attribute:: chain_id
+
+        Chain ID used to distinguish different EVM blockchains.
+
     .. py:attribute:: unit
 
         Unit name of the blockchain, ie. eth, xtz...
@@ -292,6 +296,10 @@ class Blockchain(models.Model):
     description = models.TextField(
         blank=True,
         help_text='Free text to describe the blockchain to users',
+    )
+    chain_id = models.IntegerField(
+        blank=True,
+        null=True,
     )
     unit = models.CharField(
         max_length=15,
