@@ -63,7 +63,6 @@ test:
     name: ethereum/client-go
     command:
     - "--dev"
-    - "--networkid=17"
     - "--nodiscover"
     - "--maxpeers=0"
     - "--http"
