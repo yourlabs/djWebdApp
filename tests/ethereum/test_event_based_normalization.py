@@ -9,12 +9,13 @@ def mint_non_indexed_blocks(client, num_blocks=2):
     # create non indexed blocks since wallet
     # non spooled ETH transfers are not indexed.
     for _ in range(num_blocks):
-        client.eth.send_transaction(
+        txhash = client.eth.send_transaction(
             dict(
                 to=client.eth.default_account,
                 value=client.to_wei(1, "ether"),
             )
         )
+        client.eth.wait_for_transaction_receipt(txhash)
 
 
 
@@ -96,6 +97,12 @@ def test_index_event_with_not_spooled_transaction(include, blockchain_with_event
     tx.refresh_from_db()
     assert tx.function == "mint"
     assert tx.state == "done"
+
+    blockchain_with_event_provider.refresh_from_db()
+    assert (
+        blockchain_with_event_provider.index_level
+        == blockchain_with_event_provider.provider.head
+    )
 
 
 @pytest.mark.django_db
@@ -191,6 +198,7 @@ def test_index_eth_spooled_tx(include, blockchain):
     )
     mint.deploy()
     mint.refresh_from_db()
+    client.eth.wait_for_transaction_receipt(mint.hash)
 
     # Set level of mint transaction to the previous block (with is non indexed).
     # This simulates a transaction staying in the mempool before being minted
@@ -214,7 +222,7 @@ def test_index_eth_spooled_tx(include, blockchain):
     assert mint.state == "confirm"
     # we've indexed up to the most recent transaction (the mint call),
     # so both levels should be identical.
-    assert admin.blockchain.index_level == mint.level
+    assert mint.level == admin.blockchain.index_level == admin.blockchain.provider.head
 
     # we set the `index_level` such that the mint transaction is in a previous
     # block (at state `confirm`).

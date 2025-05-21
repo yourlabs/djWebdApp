@@ -312,6 +312,7 @@ class EthereumEventProvider(EthereumProvider):
                 init_level = to_block + 1
 
         self.logs = logs
+        self.last_indexed_block = head
 
     def get_min_level(self, items, key):
         return min((item[key] for item in items), default=None)
@@ -343,6 +344,8 @@ class EthereumEventProvider(EthereumProvider):
             self.logger.info(f'Indexing level {level_to_index}')
             self.index_level(level_to_index)
             self.blockchain.index_level = level_to_index
+
+        self.blockchain.index_level = self.last_indexed_block
         self.blockchain.save()
 
     def index_level(self, level):
