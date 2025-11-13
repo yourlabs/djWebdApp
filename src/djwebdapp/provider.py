@@ -507,7 +507,10 @@ class Provider:
         for transaction in transactions:
             transaction.normalize()
             normalize_internal(transaction)
-            for event in transaction.transactionevent_set.all():
+            events_qs = transaction.transactionevent_set.order_by(
+                "event_index",
+            ).all()
+            for event in events_qs:
                 event_subclass = Event.objects.get_subclass(pk=event.pk)
                 normalize_event(event_subclass)
 
