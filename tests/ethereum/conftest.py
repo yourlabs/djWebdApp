@@ -23,7 +23,6 @@ def head(client):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def blockchain(head):
     # First, we need to add a blockchain in the database
     blockchain, _ = Blockchain.objects.get_or_create(
@@ -39,7 +38,6 @@ def blockchain(head):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def blockchain_with_event_provider(head):
     blockchain, _ = Blockchain.objects.get_or_create(
         name='Ethereum Local with event provider',

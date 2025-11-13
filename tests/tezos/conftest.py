@@ -46,7 +46,6 @@ def head(client):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def blockchain(head):
     blockchain, _ = Blockchain.objects.update_or_create(
         name='Tezos Local',
@@ -100,7 +99,6 @@ def account5(blockchain):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def multisig(deploy_and_index, blockchain, account1):
     from djwebdapp_multisig.models import MultisigContract
     multisig_contract = MultisigContract.objects.create(

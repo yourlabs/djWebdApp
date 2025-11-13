@@ -80,7 +80,6 @@ def admin_smoketest(admin_client):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def deploy_and_index():
     def f(transaction, no_assert=False):
         res = transaction.blockchain.provider.spool()
@@ -94,7 +93,6 @@ def deploy_and_index():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def blockchain():
     return Blockchain.objects.create(
         provider_class='djwebdapp.provider.Success',
@@ -102,7 +100,6 @@ def blockchain():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def account(blockchain):
     return Account.objects.create(
         address='testacc',
