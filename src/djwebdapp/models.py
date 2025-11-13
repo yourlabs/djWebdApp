@@ -700,6 +700,7 @@ class Transaction(models.Model):
         null=True,
         blank=True,
         auto_now_add=True,
+        db_index=True,
     )
     updated_at = models.DateTimeField(
         null=True,
@@ -730,12 +731,14 @@ class Transaction(models.Model):
         max_length=255,
         null=True,
         blank=True,
+        db_index=True,
     )
     counter = models.PositiveIntegerField(
         null=True,
     )
     nonce = models.IntegerField(
         default=-1,
+        db_index=True,
     )
     number = models.IntegerField(
         default=None,
@@ -781,6 +784,7 @@ class Transaction(models.Model):
     normalized = models.BooleanField(
         default=False,
         help_text='Enabled when transaction is normalized',
+        db_index=True,
     )
     state = models.CharField(
         choices=STATE_CHOICES,
@@ -1124,7 +1128,7 @@ class Event(models.Model):
         default=dict,
         blank=True,
     )
-    event_index = models.PositiveBigIntegerField()
+    event_index = models.PositiveBigIntegerField(db_index=True)
     transaction = models.ForeignKey(
         Transaction,
         on_delete=models.CASCADE,
@@ -1133,6 +1137,7 @@ class Event(models.Model):
     )
     normalized = models.BooleanField(
         default=False,
+        db_index=True,
     )
 
     objects = InheritanceManager()
