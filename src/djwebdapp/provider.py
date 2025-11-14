@@ -472,6 +472,15 @@ class Provider:
             return call
         self.logger.info('Found 0 call to retry')
 
+    def get_transactions_to_normalize(self):
+        return self.transaction_class.objects.filter(
+            normalized=False,
+            caller=None,
+            state='done',
+        ).order_by(
+            'created_at',
+        )
+
     def normalize(self):
         """
         Run `normalize()` on all un-normalized transactions.
@@ -496,13 +505,7 @@ class Provider:
 
             event.normalize()
 
-        transactions = self.transaction_class.objects.filter(
-            normalized=False,
-            caller=None,
-            state='done',
-        ).order_by(
-            'created_at',
-        )
+        transactions = self.get_transactions_to_normalize()
 
         for transaction in transactions:
             transaction.normalize()

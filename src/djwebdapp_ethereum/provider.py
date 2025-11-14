@@ -480,3 +480,12 @@ class EthereumEventProvider(EthereumProvider):
                     args=event_data[0]["args"],
                     event_index=event_data[0]["logIndex"],
                 )
+
+    def get_transactions_to_normalize(self):
+        return self.transaction_class.objects.filter(
+            transactionevent_set__normalized=False,
+            caller=None,
+            state='done',
+        ).order_by(
+            'created_at',
+        ).distinct()
