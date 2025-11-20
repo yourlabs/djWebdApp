@@ -118,6 +118,7 @@ class Account(models.Model):
         max_length=255,
         blank=True,
         null=True,
+        db_index=True,
     )
     blockchain = models.ForeignKey(
         'Blockchain',
