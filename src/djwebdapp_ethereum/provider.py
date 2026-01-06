@@ -272,11 +272,28 @@ class EthereumProvider(Provider):
 class EthereumEventProvider(EthereumProvider):
     event_class = EthereumEvent
 
-    def index_init(self):
+    def download(self, contract_addresses, from_block, to_block):
+        self.index(
+            contract_addresses,
+            from_block,
+            to_block,
+            save_blockchain=False,  # don't override indexer's state
+        )
+
+    def index_init(
+        self,
+        contract_addresses=None,
+        from_block=None,
+        to_block=None,
+    ):
         super().index_init()
         self.contracts = self.contracts.exclude(
             abi=None,
         )
+        if contract_addresses:
+            self.contracts = self.contracts.filter(
+                address__in=contract_addresses,
+            )
 
         self.addresses = self.contracts.values_list(
             'address',
@@ -286,8 +303,8 @@ class EthereumEventProvider(EthereumProvider):
         head = self.head
 
         event_filter = {
-            'fromBlock': self.blockchain.index_level or 0,
-            'toBlock': head,
+            'fromBlock': from_block or self.blockchain.index_level or 0,
+            'toBlock': to_block or head,
             'address': self.addresses,
         }
 
@@ -317,14 +334,20 @@ class EthereumEventProvider(EthereumProvider):
     def get_min_level(self, items, key):
         return min((item[key] for item in items), default=None)
 
-    def index(self):
+    def index(
+        self,
+        contract_addresses=None,
+        from_block=None,
+        to_block=None,
+        save_blockchain=True,
+    ):
         """
         Index EVM blockchains.
 
         Iterate over each level that included txs and events
         related to indexed contracts.
         """
-        self.index_init()
+        self.index_init(contract_addresses, from_block, to_block)
 
         while len(self.hashes) or len(self.logs):
             index_of_level_in_hashes_tuple = 1
@@ -346,7 +369,8 @@ class EthereumEventProvider(EthereumProvider):
             self.blockchain.index_level = level_to_index
 
         self.blockchain.index_level = self.last_indexed_block
-        self.blockchain.save()
+        if save_blockchain:
+            self.blockchain.save()
 
     def index_level(self, level):
         """

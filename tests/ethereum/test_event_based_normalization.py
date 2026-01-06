@@ -237,3 +237,82 @@ def test_index_eth_spooled_tx(include, blockchain):
     # `index_level`.
     mint.refresh_from_db()
     assert mint.state == "done"
+
+
+@pytest.mark.django_db
+def test_index_contract_from_block_to_block(include, blockchain_with_event_provider, client):
+    variables = include(
+        'djwebdapp_example_ethereum',
+        'client',
+        'blockchain_with_event_provider',
+        'account',
+        'deploy_model',  # makes 2 mints
+    )
+    fa2_contract = variables['contract']
+    client = variables['client']
+
+    def mint():
+        hash = variables['client'].eth.contract(
+            abi=fa2_contract.abi,
+            address=fa2_contract.address,
+        ).functions.mint(
+            variables['client'].eth.default_account,
+            10,
+        ).transact()
+        variables['client'].eth.wait_for_transaction_receipt(hash)
+
+    # index a first time normally
+    fa2_contract.blockchain.provider.index()
+    init_mint_count = 2
+    assert EthereumEvent.objects.count() == 2
+
+    # Stop fa2 contract indexation
+    fa2_contract.index = False
+    fa2_contract.save()
+
+    start_block = fa2_contract.blockchain.provider.head
+
+    mint()
+
+    # download until before to last mint block
+    download_until_block = fa2_contract.blockchain.provider.head
+
+    mint()
+
+    # set blockthain to index from head
+    fa2_contract.blockchain.index_level = fa2_contract.blockchain.provider.head
+    fa2_contract.blockchain.save()
+
+    assert fa2_contract.blockchain.index_level > download_until_block
+
+    # index contract including first mint only
+    fa2_contract.blockchain.provider.download(
+        fa2_contract.address,
+        start_block,
+        download_until_block,
+    )
+
+    assert EthereumEvent.objects.count() == init_mint_count + 1
+
+    # fa2_contract is still not being indexed
+    fa2_contract.refresh_from_db()
+    assert fa2_contract.index is False
+
+    # index contract from first to second mint
+    fa2_contract.blockchain.provider.download(
+        fa2_contract.address,
+        download_until_block,
+        fa2_contract.blockchain.index_level,
+    )
+
+    assert EthereumEvent.objects.count() == init_mint_count + 2
+
+    # ensure we can still index contract normally
+    fa2_contract.index = True
+    fa2_contract.save()
+
+    mint()
+
+    fa2_contract.blockchain.provider.index()
+
+    assert EthereumEvent.objects.count() == init_mint_count + 3
