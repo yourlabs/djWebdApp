@@ -1,7 +1,7 @@
 import pytest
 
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 
 from djwebdapp.models import Blockchain
 
@@ -13,7 +13,7 @@ def client():
     client.eth.default_account = client.eth.accounts[0]
 
     # enable support for geth --dev sandbox
-    client.middleware_onion.inject(geth_poa_middleware, layer=0)
+    client.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
     return client
 
 

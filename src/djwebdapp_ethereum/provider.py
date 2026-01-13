@@ -44,8 +44,8 @@ class EthereumProvider(Provider):
             client.eth.default_account = client.eth.accounts[0]
 
         if self.should_activate_client_middleware(endpoint):
-            from web3.middleware import geth_poa_middleware
-            client.middleware_onion.inject(geth_poa_middleware, layer=0)
+            from web3.middleware import ExtraDataToPOAMiddleware
+            client.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
         return client
 
@@ -68,7 +68,7 @@ class EthereumProvider(Provider):
         block = self.client.eth.get_block(level, True)
         for transaction in block.transactions:
             to = transaction.get('to', None)
-            if to is None and self.check_hash(transaction['hash'].hex()):
+            if to is None and self.check_hash(transaction['hash'].to_0x_hex()):
                 self.index_contract(level, transaction)
             elif to in self.addresses:
                 self.index_call(level, transaction)
@@ -77,7 +77,7 @@ class EthereumProvider(Provider):
         self.logger.info(f'Syncing origination {transaction["hash"]}')
         contract = EthereumTransaction.objects.get(
             blockchain=self.blockchain,
-            hash=transaction['hash'].hex(),
+            hash=transaction['hash'].to_0x_hex(),
         )
         contract.level = level
         contract.gas = transaction['gas']
@@ -100,11 +100,11 @@ class EthereumProvider(Provider):
             )
 
         call = self.transaction_class.objects.select_subclasses().filter(
-            hash=transaction['hash'].hex(),
+            hash=transaction['hash'].to_0x_hex(),
         ).first()
 
         tx_receipt = self.client.eth.get_transaction_receipt(
-            transaction['hash'].hex(),
+            transaction['hash'].to_0x_hex(),
         )
 
         if tx_receipt.status == 0:
@@ -112,7 +112,7 @@ class EthereumProvider(Provider):
 
         if not call:
             call = EthereumTransaction(
-                hash=transaction['hash'].hex(),
+                hash=transaction['hash'].to_0x_hex(),
                 contract=contract,
                 blockchain=self.blockchain,
             )
@@ -153,7 +153,7 @@ class EthereumProvider(Provider):
 
     def json(self, transaction):
         return {
-            key: value.hex() if isinstance(value, HexBytes) else value
+            key: value.to_0x_hex() if isinstance(value, HexBytes) else value
             for key, value in transaction.items()
         }
 
@@ -228,9 +228,9 @@ class EthereumProvider(Provider):
             tx,
             private_key=transaction.sender.get_secret_key(),
         )
-        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
+        self.client.eth.send_raw_transaction(signed_txn.raw_transaction)
         return self.client.to_hex(
-            self.client.keccak(signed_txn.rawTransaction)
+            self.client.keccak(signed_txn.raw_transaction)
         )
 
     def originate(self, transaction):
@@ -263,9 +263,9 @@ class EthereumProvider(Provider):
             private_key=sender.get_secret_key(),
         )
 
-        self.client.eth.send_raw_transaction(signed_txn.rawTransaction)
+        self.client.eth.send_raw_transaction(signed_txn.raw_transaction)
         return self.client.to_hex(
-            self.client.keccak(signed_txn.rawTransaction)
+            self.client.keccak(signed_txn.raw_transaction)
         )
 
 
@@ -398,7 +398,10 @@ class EthereumEventProvider(EthereumProvider):
             lambda log: log["blockNumber"] == level,
             self.logs,
         ))
-        logs_tx_hash = [log["transactionHash"].hex() for log in logs_at_level]
+        logs_tx_hash = [
+            log["transactionHash"].to_0x_hex()
+            for log in logs_at_level
+        ]
 
         hashes_at_level = list(filter(
             lambda hash_tuple: hash_tuple[1] == level,
@@ -410,11 +413,11 @@ class EthereumEventProvider(EthereumProvider):
             block = self.client.eth.get_block(level, True)
             for transaction in block.transactions:
                 to = transaction.get('to', None)
-                if to is None and transaction['hash'].hex() in hashes:
+                if to is None and transaction['hash'].to_0x_hex() in hashes:
                     self.index_contract(level, transaction)
                 elif (
                     to in self.addresses
-                    or (transaction['hash'].hex() in logs_tx_hash and to)
+                    or (transaction['hash'].to_0x_hex() in logs_tx_hash and to)
                 ):
                     self.index_call(level, transaction)
 
@@ -457,7 +460,7 @@ class EthereumEventProvider(EthereumProvider):
         with db_transaction.atomic():
             transaction, created = self.transaction_class.objects.update_or_create(  # noqa: E501
                 blockchain=self.blockchain,
-                hash=log["transactionHash"].hex(),
+                hash=log["transactionHash"].to_0x_hex(),
                 defaults=dict(
                     level=log["blockNumber"],
                 )
@@ -488,7 +491,7 @@ class EthereumEventProvider(EthereumProvider):
             abi=contract.abi,
         )
         # first topic encodes event name
-        encoded_log_name = log["topics"][0].hex()
+        encoded_log_name = log["topics"][0].to_0x_hex()
         event_names = self.get_contract_event_names(
             contract_ci.abi,
             encoded_log_name,

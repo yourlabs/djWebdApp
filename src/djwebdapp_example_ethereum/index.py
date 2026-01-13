@@ -7,7 +7,7 @@ contract = FA12Ethereum.objects.create(
     # used to translate function calls
     abi=abi,
     # used to fill the contract metadata
-    hash=contract_hash.hex(),
+    hash=contract_hash.to_0x_hex(),
 )
 assert contract.kind == 'contract'
 

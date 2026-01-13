@@ -5,7 +5,7 @@ Contract = client.eth.contract(
 
 tx = Contract.functions.mint(client.eth.default_account, 300).transact()
 receipt = client.eth.wait_for_transaction_receipt(tx)
-txhash = receipt['transactionHash'].hex()
+txhash = receipt['transactionHash'].to_0x_hex()
 
 blockchain.provider.index()
 indexed = blockchain.provider.transaction_class.objects.get(hash=txhash)

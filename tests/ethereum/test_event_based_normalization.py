@@ -82,7 +82,7 @@ def test_index_event_with_not_spooled_transaction(include, blockchain_with_event
     # and that its mint event FK is set.
     assert fa2_contract.kind == "contract"
     assert fa2_contract.index is True
-    tx = EthereumTransaction.objects.get(hash=hash.hex())
+    tx = EthereumTransaction.objects.get(hash=hash.to_0x_hex())
     assert tx.kind == "function"
     assert tx.index is False
     assert tx.transactionevent_set.first().name == "Mint"
