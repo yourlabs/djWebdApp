@@ -33,3 +33,29 @@ class Normalizer:
         callback = getattr(normalizer, callback_name, None)
         if callback:
             callback(event, contract)
+
+    @classmethod
+    def reorg_event(cls, event, contract):
+        """
+        Called when an event is about to be deleted due to chain reorganization.
+
+        Override reorg_{EventName} methods in your normalizer to handle cleanup:
+
+            class MyNormalizer(Normalizer):
+                @staticmethod
+                def reorg_Transfer(event, contract):
+                    # Cleanup domain objects created by Transfer event
+                    MyBalance.objects.filter(event=event).delete()
+                    # Recalculate aggregates
+                    recalculate_balances(event.args['from'])
+                    recalculate_balances(event.args['to'])
+
+        Args:
+            event: The EthereumEvent being deleted
+            contract: The contract that emitted the event
+        """
+        normalizer = cls()
+        callback_name = f'reorg_{event.name}'
+        callback = getattr(normalizer, callback_name, None)
+        if callback:
+            callback(event, contract)

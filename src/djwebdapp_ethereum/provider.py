@@ -8,7 +8,8 @@ from web3.exceptions import ContractLogicError
 from django.conf import settings
 
 from django.db import transaction as db_transaction
-from djwebdapp.models import Account
+from djwebdapp.models import Account, IndexedBlock
+from djwebdapp.signals import reorg_detected
 from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from djwebdapp.provider import Provider
 
@@ -346,7 +347,13 @@ class EthereumEventProvider(EthereumProvider):
 
         Iterate over each level that included txs and events
         related to indexed contracts.
+
+        Checks for reorg before indexing and handles it if detected.
         """
+        # Check for reorg before indexing
+        if self.reorg():
+            return  # Commit reorg handling, will re-index on next call
+
         self.index_init(contract_addresses, from_block, to_block)
 
         while len(self.hashes) or len(self.logs):
@@ -366,8 +373,12 @@ class EthereumEventProvider(EthereumProvider):
 
             self.logger.info(f'Indexing level {level_to_index}')
             self.index_level(level_to_index)
+            self.store_block_hash(level_to_index)
             self.blockchain.index_level = level_to_index
 
+        # Store hash for the last indexed block
+        if self.last_indexed_block:
+            self.store_block_hash(self.last_indexed_block)
         self.blockchain.index_level = self.last_indexed_block
         if save_blockchain:
             self.blockchain.save()
@@ -494,21 +505,172 @@ class EthereumEventProvider(EthereumProvider):
         )
         for event_name in event_names:
             event = getattr(contract_ci.events, event_name)
-            event_data = event().process_receipt({"logs": [log]})
+            event_data = event().process_log(log)
             if event_data:
                 self.event_class.objects.update_or_create(
                     name=event_name,
                     contract=contract,
                     transaction=transaction,
-                    args=event_data[0]["args"],
-                    event_index=event_data[0]["logIndex"],
+                    args=event_data["args"],
+                    event_index=event_data["logIndex"],
                 )
 
     def get_transactions_to_normalize(self):
+        """
+        Get transactions with un-normalized events that are confirmed.
+
+        Only returns transactions where:
+        - Has un-normalized events
+        - Transaction is done
+        - Block level is confirmed (level <= head - min_confirmations)
+        """
+        confirmed_level = self.head - self.blockchain.min_confirmations
         return self.transaction_class.objects.filter(
             transactionevent_set__normalized=False,
             caller=None,
             state='done',
+            level__lte=confirmed_level,
         ).order_by(
             'created_at',
         ).distinct()
+
+    def find_fork_point(self):
+        """
+        Find the fork point (last common ancestor) between indexed chain and current chain.
+
+        Walks backwards from the most recent indexed block until finding a block
+        where our stored hash matches the current chain's hash. The fork point
+        is that matching block - everything after it has diverged.
+
+        Returns:
+            - None if no reorg detected (most recent block matches)
+            - The level AFTER the last common ancestor (first divergent block)
+              i.e., the level from which we need to delete/re-index
+        """
+        if self.blockchain.index_level is None:
+            return None
+
+        # Walk backwards from most recent indexed block to find last common ancestor
+        indexed_blocks = IndexedBlock.objects.filter(
+            blockchain=self.blockchain,
+        ).order_by('-level')  # Most recent first
+
+        if not indexed_blocks.exists():
+            return None
+
+        highest_indexed = indexed_blocks.first().level
+
+        for indexed_block in indexed_blocks.iterator():
+            try:
+                current_block = self.client.eth.get_block(indexed_block.level)
+                current_hash = current_block['hash'].to_0x_hex()
+            except Exception:
+                # Block doesn't exist on current chain - keep looking earlier
+                continue
+
+            if current_hash == indexed_block.block_hash:
+                # Found last common ancestor
+                if indexed_block.level == highest_indexed:
+                    # Most recent indexed block matches - no reorg
+                    return None
+                else:
+                    # Reorg detected - return first divergent level
+                    return indexed_block.level + 1
+
+        # No matching block found in our indexed history
+        # This is a catastrophic reorg deeper than our history
+        earliest = IndexedBlock.objects.filter(
+            blockchain=self.blockchain
+        ).order_by('level').first()
+
+        if earliest:
+            self.logger.error(
+                f'Reorg deeper than indexed history! '
+                f'Earliest indexed: {earliest.level}'
+            )
+            return earliest.level
+
+        return None
+
+    def reorg(self):
+        """
+        Handle chain reorganization.
+
+        Finds the fork point (last common ancestor) and:
+        1. Calls reorg_{EventName} hooks for affected events
+        2. Reset transactions to state='deleted'
+        3. Delete IndexedBlock records
+        4. Reset blockchain.index_level to fork point
+
+        Returns True if reorg was handled, False otherwise.
+        """
+        reorg_level = self.find_fork_point()
+
+        if reorg_level is None:
+            return False
+
+        # TODO: reorg signal
+        self.logger.warning(
+            f'Detected reorg in {self.blockchain} at level {reorg_level}'
+        )
+
+        # Get events to be deleted and call reorg hooks before deletion
+        events_to_delete = EthereumEvent.objects.filter(
+            contract__blockchain=self.blockchain,
+            transaction__level__gte=reorg_level,
+        ).select_related('contract', 'transaction')
+
+        # Call reorg_{EventName} normalizer hooks for each event
+        for event in events_to_delete:
+            try:
+                contract = event.contract_subclass()
+                normalizer = contract.normalizer_get()
+                if normalizer:
+                    normalizer.reorg_event(event, contract)
+            except Exception as e:
+                self.logger.error(f'Error in reorg hook for {event}: {e}')
+
+        # Reset transactions at or after reorg level
+        from djwebdapp.models import Transaction
+        Transaction.objects.filter(
+            blockchain=self.blockchain,
+            level__gte=reorg_level,
+        ).exclude(level=None).update(
+            state='deleted',
+        )
+
+        reorg_block_hash = None
+        reorg_block = IndexedBlock.objects.filter(
+            blockchain=self.blockchain,
+            level=reorg_level,
+        ).first()
+        if reorg_block:
+            reorg_block_hash = reorg_block.block_hash
+
+        # Delete IndexedBlock records at or after reorg level
+        IndexedBlock.objects.filter(
+            blockchain=self.blockchain,
+            level__gte=reorg_level,
+        ).delete()
+
+        # Reset index level to just before reorg
+        self.blockchain.index_level = reorg_level - 1 if reorg_level > 0 else 0
+        self.blockchain.save()
+
+        reorg_detected.send(
+            sender=self.__class__,
+            blockchain=self.blockchain,
+            reorg_level=reorg_level,
+            reorg_block_hash=reorg_block_hash,
+        )
+
+        return True
+
+    def store_block_hash(self, level):
+        """Store the block hash for reorg detection."""
+        block = self.client.eth.get_block(level)
+        IndexedBlock.objects.update_or_create(
+            blockchain=self.blockchain,
+            level=level,
+            defaults={'block_hash': block['hash'].to_0x_hex()}
+        )
