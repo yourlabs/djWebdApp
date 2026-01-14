@@ -1178,6 +1178,39 @@ def dependency_graph(sender, instance, **kwargs):
             instance.dependency_add(instance.contract)
 
 
+class IndexedBlock(models.Model):
+    """
+    Track indexed blocks for reorg detection.
+
+    Stores the block hash for each indexed level, allowing detection of
+    chain reorganizations by comparing stored hashes with current chain.
+
+    .. py:attribute:: blockchain
+
+        Foreign key to the :py:class:`~Blockchain` this block belongs to.
+
+    .. py:attribute:: level
+
+        Block number/level.
+
+    .. py:attribute:: block_hash
+
+        Hash of the block at this level.
+    """
+    blockchain = models.ForeignKey(
+        'Blockchain',
+        on_delete=models.CASCADE,
+    )
+    level = models.PositiveIntegerField(db_index=True)
+    block_hash = models.CharField(max_length=66)  # 0x + 64 hex chars
+
+    class Meta:
+        unique_together = ('blockchain', 'level')
+
+    def __str__(self):
+        return f'{self.blockchain.name}:{self.level}'
+
+
 class Dependency(models.Model):
     """
     A dependency between two transactions.

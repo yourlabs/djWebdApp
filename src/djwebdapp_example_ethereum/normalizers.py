@@ -43,9 +43,18 @@ class FA12EthereumNormalizer(Normalizer):
             )
         )
 
-    def Mint__reorg(self, event, contract):
-        balance_movement = FA12EthereumBalanceMovement.objects.get(
-            fa12=contract,
-            event=event,
-        )
-        balance_movement.delete()
+    def reorg_Mint(self, event, contract):
+        """
+        Called when a Mint event is deleted due to chain reorganization.
+
+        Deletes the associated balance movement and recalculates balances.
+        The FA12EthereumBalanceMovement.delete() method handles recalculation.
+        """
+        try:
+            balance_movement = FA12EthereumBalanceMovement.objects.get(
+                fa12=contract,
+                event=event,
+            )
+            balance_movement.delete()  # This triggers balance recalculation
+        except FA12EthereumBalanceMovement.DoesNotExist:
+            pass  # Movement may not exist if event was never normalized
