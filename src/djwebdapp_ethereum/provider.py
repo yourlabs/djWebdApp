@@ -398,10 +398,6 @@ class EthereumEventProvider(EthereumProvider):
             lambda log: log["blockNumber"] == level,
             self.logs,
         ))
-        logs_tx_hash = [
-            log["transactionHash"].to_0x_hex()
-            for log in logs_at_level
-        ]
 
         hashes_at_level = list(filter(
             lambda hash_tuple: hash_tuple[1] == level,
@@ -417,7 +413,7 @@ class EthereumEventProvider(EthereumProvider):
                     self.index_contract(level, transaction)
                 elif (
                     to in self.addresses
-                    or (transaction['hash'].to_0x_hex() in logs_tx_hash and to)
+                    or (transaction['hash'].to_0x_hex() in hashes and to)
                 ):
                     self.index_call(level, transaction)
 

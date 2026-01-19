@@ -316,3 +316,56 @@ def test_index_contract_from_block_to_block(include, blockchain_with_event_provi
     fa2_contract.blockchain.provider.index()
 
     assert EthereumEvent.objects.count() == init_mint_count + 3
+
+
+@pytest.mark.django_db
+def test_normalize_old_unconfirmed_blocks(include, blockchain_with_event_provider, client):
+    """
+    Tests that confirm txs that have a level lower that blockchain.index_level
+    are indexed.
+    """
+    variables = include(
+        'djwebdapp_example_ethereum',
+        'client',
+        'blockchain_with_event_provider',
+        'account',
+        'deploy_model',
+    )
+
+    # Setup 2 confirm blocks
+    blockchain_with_event_provider.min_confirmations = 2
+    blockchain_with_event_provider.save()
+
+    token = blockchain_with_event_provider.transaction_set.exclude(address=None).first().contract_subclass()
+
+    token_proxy = deploy_token_proxy(token.sender)
+    token_proxy.index = False
+    token_proxy.save()
+    call_token_proxy(token.sender, token_proxy, token)
+
+    # Need to wait spooling before indexing
+    time.sleep(1)
+
+    # mint 1 blocks
+    mint_non_indexed_blocks(client, num_blocks=1)
+
+    # index, the index level is now greater than `confirm_tx.level`, but the
+    # transaction is less than 2 levels deep and so still marked as "confirm"
+    blockchain_with_event_provider.provider.index()
+    confirm_tx = EthereumEvent.objects.get(transaction__state="confirm").transaction
+
+    confirm_tx.refresh_from_db()
+    blockchain_with_event_provider.refresh_from_db()
+    assert confirm_tx.level == blockchain_with_event_provider.index_level - 1
+    assert confirm_tx.state == "confirm"
+
+    # mint some more blocks
+    mint_non_indexed_blocks(client, num_blocks=2)
+
+    # index everything
+    blockchain_with_event_provider.provider.index()
+
+    # assert all transactions are now done
+    confirm_tx.refresh_from_db()
+    assert confirm_tx.state == "done"
+    assert set(EthereumEvent.objects.values_list("transaction__state", flat=True)) == {"done"}
