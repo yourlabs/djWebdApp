@@ -177,7 +177,7 @@ class Provider:
         ).filter(
             Q(state='confirm') | ~Q(hash=None)
         ).exclude(
-            state='done'
+            Q(state='done') | Q(state='deleted')
         ).values_list('hash', 'level'))
 
         self.logger.info(f'Found {len(self.hashes)} transactions to index')
