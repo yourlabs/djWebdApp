@@ -1,6 +1,8 @@
 import pytest
 import time
 from unittest import mock
+from hexbytes import HexBytes
+from web3.datastructures import AttributeDict
 from djwebdapp_ethereum.models import EthereumEvent, EthereumTransaction
 from tests.ethereum import call_token_proxy, deploy_token_proxy
 
@@ -369,3 +371,82 @@ def test_normalize_old_unconfirmed_blocks(include, blockchain_with_event_provide
     confirm_tx.refresh_from_db()
     assert confirm_tx.state == "done"
     assert set(EthereumEvent.objects.values_list("transaction__state", flat=True)) == {"done"}
+
+
+@pytest.mark.django_db
+def test_index_eip7702_transaction(blockchain_with_event_provider):
+    """
+    Test that EIP-7702 transactions (type 4) with authorizationList can be
+    indexed without JSON serialization errors.
+
+    EIP-7702 transactions contain an authorizationList field with AttributeDict
+    objects containing HexBytes values that must be properly serialized to JSON
+    when saving transaction metadata.
+    """
+    import json
+    from djwebdapp.models import Account
+
+    # Create a mock EIP-7702 transaction matching real-world structure
+    mock_eip7702_tx = AttributeDict({
+        'type': 4,
+        'chainId': 1,
+        'nonce': 313122,
+        'gas': 1598073,
+        'maxFeePerGas': 2206557853,
+        'maxPriorityFeePerGas': 2100000001,
+        'to': '0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3',
+        'value': 0,
+        'accessList': [],
+        'authorizationList': [AttributeDict({
+            'chainId': 1,
+            'address': '0x63c0c19a282a1B52b07dD5a65b58948A07DAE32B',
+            'nonce': 27,
+            'yParity': 0,
+            'r': HexBytes('0x2d63bbb7a01a8605535d7d9e874b369e99701268b1481faa7fb471db84ea4174'),
+            's': HexBytes('0x175127b3e8530969fd8f1dab8eb44c3f5b65be4aef0cd786879d803197fcd1fd'),
+        })],
+        'input': HexBytes('0xcef6d209'),
+        'r': HexBytes('0xc886608f7502f2ed03de2b97f1ded9b65559a1a029c7e6c15e9c41cc9b816dbd'),
+        's': HexBytes('0x5aaf0cb394865e7219f0d365f2f2f24a1fc446c88b7bf1bfacea6abe880720d0'),
+        'yParity': 0,
+        'v': 0,
+        'hash': HexBytes('0xd9150d6a9ed8a6e55d37124831505353970b81ebe8f1ef9c78fed8c7bf54d52b'),
+        'blockHash': HexBytes('0xea7331d6a073ec5139050194e7598c949c2509e46c0f8c26925021a2b1d9b8bd'),
+        'blockNumber': 24282106,
+        'transactionIndex': 5,
+        'from': '0xC066ac5D385419B1A8c43A0E146fA439837a8B8c',
+        'gasPrice': 2204639044,
+    })
+
+    # Create sender account
+    sender, _ = Account.objects.get_or_create(
+        address='0xC066ac5D385419B1A8c43A0E146fA439837a8B8c',
+        blockchain=blockchain_with_event_provider,
+    )
+
+    # Create contract that will be called
+    contract = EthereumTransaction.objects.create(
+        blockchain=blockchain_with_event_provider,
+        address='0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3',
+        index=True,
+    )
+
+    # Test provider.json() method directly - this is where serialization happens
+    provider = blockchain_with_event_provider.provider
+    serialized = provider.json(mock_eip7702_tx)
+
+    # The serialized result should be JSON-serializable (this is where the bug manifests)
+    # If the fix is not implemented, this will raise:
+    # TypeError: Object of type AttributeDict is not JSON serializable
+    json_str = json.dumps(serialized)
+
+    # Verify the structure is correct after serialization
+    parsed = json.loads(json_str)
+    assert 'authorizationList' in parsed
+    assert len(parsed['authorizationList']) == 1
+    # Verify HexBytes were converted to hex strings
+    assert parsed['authorizationList'][0]['r'] == '0x2d63bbb7a01a8605535d7d9e874b369e99701268b1481faa7fb471db84ea4174'
+    assert parsed['authorizationList'][0]['s'] == '0x175127b3e8530969fd8f1dab8eb44c3f5b65be4aef0cd786879d803197fcd1fd'
+    # Verify top-level HexBytes were converted
+    assert parsed['hash'] == '0xd9150d6a9ed8a6e55d37124831505353970b81ebe8f1ef9c78fed8c7bf54d52b'
+    assert parsed['input'] == '0xcef6d209'

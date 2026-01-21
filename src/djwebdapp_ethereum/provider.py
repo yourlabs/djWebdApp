@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping
 
 from eth_utils.abi import event_abi_to_log_topic
 from hexbytes import HexBytes
@@ -152,10 +153,29 @@ class EthereumProvider(Provider):
         return call.metadata['input'] == '0x'
 
     def json(self, transaction):
-        return {
-            key: value.to_0x_hex() if isinstance(value, HexBytes) else value
-            for key, value in transaction.items()
-        }
+        """
+        Convert a web3 transaction object to a JSON-serializable dict.
+
+        Recursively handles:
+        - HexBytes → hex string
+        - AttributeDict/Mapping → regular dict
+        - Lists → processed recursively
+        """
+        return self._to_json_serializable(transaction)
+
+    def _to_json_serializable(self, obj):
+        """Recursively convert web3 types to JSON-serializable Python types."""
+        if isinstance(obj, HexBytes):
+            return obj.to_0x_hex()
+        elif isinstance(obj, Mapping):
+            return {
+                key: self._to_json_serializable(value)
+                for key, value in obj.items()
+            }
+        elif isinstance(obj, (list, tuple)):
+            return [self._to_json_serializable(item) for item in obj]
+        else:
+            return obj
 
     def send(self, transaction):
         Contract = self.client.eth.contract(  # noqa
